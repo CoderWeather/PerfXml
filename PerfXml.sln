@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{341833A5-7114-4469-96E7-A741D403BA52}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfXml", "src\PerfXml\PerfXml.csproj", "{FA398160-7EC0-45E4-9190-69CD0502FEB4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfXml.Generator", "src\PerfXml.Generator\PerfXml.Generator.csproj", "{83280FEC-602C-4307-8EF3-563A415889A6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_globals", "_globals", "{F074573A-50B8-4E71-9232-9B3F0B48D50A}"
+	ProjectSection(SolutionItems) = preProject
+		global.json = global.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FA398160-7EC0-45E4-9190-69CD0502FEB4} = {341833A5-7114-4469-96E7-A741D403BA52}
+		{83280FEC-602C-4307-8EF3-563A415889A6} = {341833A5-7114-4469-96E7-A741D403BA52}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FA398160-7EC0-45E4-9190-69CD0502FEB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA398160-7EC0-45E4-9190-69CD0502FEB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA398160-7EC0-45E4-9190-69CD0502FEB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA398160-7EC0-45E4-9190-69CD0502FEB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83280FEC-602C-4307-8EF3-563A415889A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83280FEC-602C-4307-8EF3-563A415889A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83280FEC-602C-4307-8EF3-563A415889A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83280FEC-602C-4307-8EF3-563A415889A6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
