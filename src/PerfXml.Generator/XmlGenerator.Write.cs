@@ -23,7 +23,7 @@ internal partial class XmlGenerator {
 				foreach (var body in cls.XmlBodies) {
 					if (body.Type.Name == "String") {
 						writer.WriteLine(
-							$"{body.Symbol.Name} = buffer.DeserializeCDATA(bodySpan, out end).ToString();");
+							$"this.{body.Symbol.Name} = buffer.DeserializeCDATA(bodySpan, out end).ToString();");
 					}
 					else {
 						throw new(
@@ -106,20 +106,20 @@ internal partial class XmlGenerator {
 				if (classToParse is not null) {
 					if (isList) {
 						writer.WriteLine(
-							$"{body.Symbol.Name} ??= new();");
+							$"this.{body.Symbol.Name} ??= new();");
 						writer.WriteLine(
-							$"{body.Symbol.Name}.Add(buffer.Read<{classToParse.Symbol}>(bodySpan, out end));");
+							$"this.{body.Symbol.Name}.Add(buffer.Read<{classToParse.Symbol}>(bodySpan, out end));");
 					}
 					else {
 						writer.WriteLine(
-							$"if ({body.Symbol.Name} is not null) throw new InvalidDataException(\"duplicate non-list body {nameToCheck}\");");
+							$"if (this.{body.Symbol.Name} is not null) throw new InvalidDataException(\"duplicate non-list body {nameToCheck}\");");
 						writer.WriteLine(
-							$"{body.Symbol.Name} = buffer.Read<{classToParse.Symbol}>(bodySpan, out end);");
+							$"this.{body.Symbol.Name} = buffer.Read<{classToParse.Symbol}>(bodySpan, out end);");
 					}
 				}
 				else if (body.Type.Name == "String") {
 					writer.WriteLine(
-						$"{body.Symbol.Name} = buffer.DeserializeCDATA(innerBodySpan, out endInner).ToString();"
+						$"this.{body.Symbol.Name} = buffer.DeserializeCDATA(innerBodySpan, out endInner).ToString();"
 					);
 				}
 				else if (body.Type.IsPrimitive()) {
@@ -127,7 +127,7 @@ internal partial class XmlGenerator {
 						"var value = buffer.ReadNodeValue(innerBodySpan, out endInner);"
 					);
 					writer.WriteLine(
-						$"this.{body.Symbol.Name} = {GetParseAction(body)};"
+						$"this.this.{body.Symbol.Name} = {GetParseAction(body)};"
 					);
 				}
 				else {
@@ -181,10 +181,10 @@ internal partial class XmlGenerator {
 						   $"if (nodeName.Equals(NodeNamesCollector.GetFor<{body.Type}>(), StringComparison.Ordinal))"
 					   )) {
 					writer.WriteLine(
-						$"if ({body.Symbol.Name} is not null) throw new InvalidDataException(\"duplicate non-list body {body.Symbol.Name}\");"
+						$"if (this.{body.Symbol.Name} is not null) throw new InvalidDataException(\"duplicate non-list body this.{body.Symbol.Name}\");"
 					);
 					writer.WriteLine(
-						$"{body.Symbol.Name} = buffer.Read<{body.Type}>(bodySpan, out end);"
+						$"this.{body.Symbol.Name} = buffer.Read<{body.Type}>(bodySpan, out end);"
 					);
 					writer.WriteLine("return true;");
 				}
@@ -231,7 +231,7 @@ internal partial class XmlGenerator {
 								writer.WriteLine($"lst.Add({readerMethod});");
 							}
 
-							writer.WriteLine($"{attr.Symbol.Name} = lst;");
+							writer.WriteLine($"this.{attr.Symbol.Name} = lst;");
 						}
 						else {
 							var readCommand = GetParseAction(attr);
@@ -269,7 +269,7 @@ internal partial class XmlGenerator {
 
 				NestedScope? isNotNullScope = null;
 				if (isCanBeNull) {
-					writer.WriteLine($"if ({body.Symbol.Name} is not null)");
+					writer.WriteLine($"if (this.{body.Symbol.Name} is not null)");
 					isNotNullScope = NestedScope.Start(writer);
 				}
 
@@ -278,14 +278,14 @@ internal partial class XmlGenerator {
 						throw new("for xml body of type list<T>, T must be IXmlSerialization");
 					}
 
-					writer.WriteLine($"foreach (var obj in {body.Symbol.Name})");
+					writer.WriteLine($"foreach (var obj in this.{body.Symbol.Name})");
 					using (NestedScope.Start(writer)) {
 						writer.WriteLine("obj.Serialize(ref buffer);");
 					}
 				}
 				// another IXmlSerialization
 				else if (body.Type.IsPrimitive() is false) {
-					writer.WriteLine($"{body.Symbol.Name}.Serialize(ref buffer);");
+					writer.WriteLine($"this.{body.Symbol.Name}.Serialize(ref buffer);");
 				}
 				else {
 					if (body.XmlName is not null) {
@@ -295,10 +295,10 @@ internal partial class XmlGenerator {
 					}
 
 					if (body.Type.IsString()) {
-						writer.WriteLine($"buffer.PutCData({body.Symbol.Name});");
+						writer.WriteLine($"buffer.PutCData(this.{body.Symbol.Name});");
 					}
 					else if (body.Type.IsPrimitive()) {
-						writer.WriteLine($"buffer.PutValue({body.Symbol.Name});");
+						writer.WriteLine($"buffer.PutValue(this.{body.Symbol.Name});");
 					}
 					else {
 						throw new($"how to put sub body {body.Type.Name}");
