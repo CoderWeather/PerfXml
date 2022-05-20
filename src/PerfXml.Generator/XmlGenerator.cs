@@ -173,12 +173,11 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 			}
 		}
 
-		foreach (var (k, v) in classes
+		foreach (var (_, v) in classes
 					.Where(x => x.Value.AlreadyHasEmptyConstructor)
 					.ToArray()) {
-			if (v.XmlAttributes.Any(x => x.Type.IsList()) || v.XmlBodies.Any(x => x.Type.IsList())) {
-				classes.Remove(k);
-			}
+			v.XmlAttributes.RemoveAll(x => x.Type.IsList());
+			v.XmlBodies.RemoveAll(x => x.Type.IsList());
 		}
 
 		foreach (var (_, v) in classes) {
@@ -283,7 +282,6 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		return readCommand;
 	}
 
-	// TODO
 	public static string GetWriterForType(string type, string toWrite) {
 		var result = type switch {
 			"String"  => $"writer.PutString({toWrite})",
@@ -302,7 +300,6 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		return result;
 	}
 
-	// TODO
 	public static string GetReaderForType(string type) {
 		var result = type switch {
 			"String"  => "reader.GetString().ToString()",

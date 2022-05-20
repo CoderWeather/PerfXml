@@ -11,6 +11,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_globals", "_globals", "{F0
 		global.json = global.json
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0FFFD938-9090-49A4-AED8-67312ACF3BF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lib", "tests\Lib\Lib.csproj", "{21A2A842-DA3E-4A35-BF83-4E3361456DB7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +23,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{FA398160-7EC0-45E4-9190-69CD0502FEB4} = {341833A5-7114-4469-96E7-A741D403BA52}
 		{83280FEC-602C-4307-8EF3-563A415889A6} = {341833A5-7114-4469-96E7-A741D403BA52}
+		{21A2A842-DA3E-4A35-BF83-4E3361456DB7} = {0FFFD938-9090-49A4-AED8-67312ACF3BF0}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{FA398160-7EC0-45E4-9190-69CD0502FEB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -29,5 +34,9 @@ Global
 		{83280FEC-602C-4307-8EF3-563A415889A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{83280FEC-602C-4307-8EF3-563A415889A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{83280FEC-602C-4307-8EF3-563A415889A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21A2A842-DA3E-4A35-BF83-4E3361456DB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21A2A842-DA3E-4A35-BF83-4E3361456DB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21A2A842-DA3E-4A35-BF83-4E3361456DB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21A2A842-DA3E-4A35-BF83-4E3361456DB7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

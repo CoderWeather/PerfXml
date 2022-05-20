@@ -127,7 +127,7 @@ internal partial class XmlGenerator {
 						"var value = buffer.ReadNodeValue(innerBodySpan, out endInner);"
 					);
 					writer.WriteLine(
-						$"this.this.{body.Symbol.Name} = {GetParseAction(body)};"
+						$"this.{body.Symbol.Name} = {GetParseAction(body)};"
 					);
 				}
 				else {

@@ -56,7 +56,7 @@ internal sealed class NestedClassScope : IDisposable {
 	}
 
 	public static NestedClassScope Start(IndentedTextWriter writer,
-		ITypeSymbol cls,
+		INamedTypeSymbol cls,
 		bool implementsSerializationInterface = true
 	) {
 		var scope = new NestedClassScope(writer, cls);
@@ -73,22 +73,23 @@ internal sealed class NestedClassScope : IDisposable {
 		return scope;
 	}
 
-	private static string TypeKindToStr(TypeKind kind) {
-		return kind switch {
-			TypeKind.Class  => "class",
-			TypeKind.Struct => "struct",
-			_               => throw new($"Unhandled kind {kind} in {nameof(TypeKindToStr)}")
+	private static string TypeKindToStr(INamedTypeSymbol type) {
+		return type switch {
+			{ IsRecord: true }           => "record",
+			{ TypeKind: TypeKind.Class } => "class",
+			{ IsValueType: true }        => "struct",
+			_                            => throw new($"Unhandled kind {type} in {nameof(TypeKindToStr)}")
 		};
 	}
 
-	private static string GetClsString(ITypeSymbol namedTypeSymbol) {
+	private static string GetClsString(INamedTypeSymbol type) {
 		// {public/private...} {ref} partial {class/struct} {name}
 		const string f = "{0} {1}partial {2} {3}";
-		var symbolStr = namedTypeSymbol.ToString()!;
+		var symbolStr = type.ToString()!;
 		var str = string.Format(f,
-			namedTypeSymbol.DeclaredAccessibility.ToString().ToLowerInvariant(),
-			namedTypeSymbol.IsRefLikeType ? "ref " : string.Empty,
-			TypeKindToStr(namedTypeSymbol.TypeKind),
+			type.DeclaredAccessibility.ToString().ToLowerInvariant(),
+			type.IsRefLikeType ? "ref " : string.Empty,
+			TypeKindToStr(type),
 			symbolStr[(symbolStr.LastIndexOf('.') + 1)..]
 		);
 		return str;

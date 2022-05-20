@@ -3,7 +3,7 @@
 namespace PerfXml.Generator;
 
 internal class SyntaxReceiver : ISyntaxReceiver {
-	public List<ClassDeclarationSyntax> Classes { get; } = new();
+	public List<TypeDeclarationSyntax> Classes { get; } = new();
 	public List<FieldDeclarationSyntax> Fields { get; } = new();
 	public List<PropertyDeclarationSyntax> Properties { get; } = new();
 
@@ -11,6 +11,9 @@ internal class SyntaxReceiver : ISyntaxReceiver {
 		switch (syntaxNode) {
 			case ClassDeclarationSyntax { AttributeLists.Count: > 0 } classDeclarationSyntax:
 				Classes.Add(classDeclarationSyntax);
+				break;
+			case RecordDeclarationSyntax { AttributeLists.Count: > 0 } recordDeclarationSyntax:
+				Classes.Add(recordDeclarationSyntax);
 				break;
 			case FieldDeclarationSyntax { AttributeLists.Count: > 0 } fieldDeclarationSyntax:
 				Fields.Add(fieldDeclarationSyntax);
