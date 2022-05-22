@@ -40,31 +40,14 @@ public ref struct StrWriter {
 			PutRaw(Separator);
 	}
 
-	public void PutString(ReadOnlySpan<char> str) {
+	public void Write<T>(T value, IXmlFormatterResolver resolver) {
 		PutSeparator();
-		PutRaw(str);
-	}
-
-	public void PutDouble(double val) {
-		PutSeparator();
-		// ReSharper disable once RedundantAssignment
-		var success = val.TryFormat(Buffer[currIdx..],
-			out var written,
-			default,
-			CultureInfo.InvariantCulture);
-		Debug.Assert(success);
-		currIdx += written;
-	}
-
-	public void PutInt(int val) {
-		PutSeparator();
-		// ReSharper disable once RedundantAssignment
-		var success = val.TryFormat(Buffer[currIdx..],
-			out var written,
-			default,
-			CultureInfo.InvariantCulture);
-		Debug.Assert(success);
-		currIdx += written;
+		if (resolver.TryWriteTo(Buffer, value, out var charsWritten)) {
+			currIdx += charsWritten;
+		}
+		else {
+			throw new InvalidOperationException();
+		}
 	}
 
 	public void PutRaw(char c) {

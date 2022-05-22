@@ -1,5 +1,3 @@
-using PerfXml.Str;
-
 namespace PerfXml;
 
 /// <summary>
@@ -10,7 +8,10 @@ public interface IXmlSerialization {
 	/// <returns>Name of the node to be written</returns>
 	public ReadOnlySpan<char> GetNodeName();
 
-	public bool ParseFullBody(ref XmlReadBuffer buffer, ReadOnlySpan<char> bodySpan, ref int end);
+	public bool ParseFullBody(ref XmlReadBuffer buffer,
+		ReadOnlySpan<char> bodySpan,
+		ref int end,
+		IXmlFormatterResolver resolver);
 
 	public bool ParseSubBody(
 		ref XmlReadBuffer buffer,
@@ -18,7 +19,8 @@ public interface IXmlSerialization {
 		ReadOnlySpan<char> bodySpan,
 		ReadOnlySpan<char> innerBodySpan,
 		ref int end,
-		ref int endInner
+		ref int endInner,
+		IXmlFormatterResolver resolver
 	);
 
 	public bool ParseSubBody(
@@ -27,16 +29,20 @@ public interface IXmlSerialization {
 		ReadOnlySpan<char> bodySpan,
 		ReadOnlySpan<char> innerBodySpan,
 		ref int end,
-		ref int endInner
+		ref int endInner,
+		IXmlFormatterResolver resolver
 	);
 
-	public bool ParseAttribute(ref XmlReadBuffer buffer, ulong hash, SpanStr value);
+	public bool ParseAttribute(ref XmlReadBuffer buffer,
+		ulong hash,
+		ReadOnlySpan<char> value,
+		IXmlFormatterResolver resolver);
 
-	public void SerializeBody(ref XmlWriteBuffer buffer);
+	public void SerializeBody(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver);
 
-	public void SerializeAttributes(ref XmlWriteBuffer buffer);
+	public void SerializeAttributes(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver);
 
-	public void Serialize(ref XmlWriteBuffer buffer);
+	public void Serialize(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver);
 
 	/// <summary>Calculate fast hash of attribute/node name</summary>
 	/// <param name="name">Name to hash</param>

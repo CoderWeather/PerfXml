@@ -25,13 +25,9 @@ internal sealed class NestedScope : IDisposable {
 		scope.Close();
 	}
 
-	public static NestedScope Start(IndentedTextWriter writer, string? scopeName = null) {
+	public static NestedScope Start(IndentedTextWriter writer) {
 		var scope = new NestedScope(writer);
 		Stack.Push(scope);
-		if (scopeName is not null) {
-			writer.WriteLine(scopeName);
-		}
-
 		writer.WriteLine('{');
 		writer.Indent++;
 		return scope;

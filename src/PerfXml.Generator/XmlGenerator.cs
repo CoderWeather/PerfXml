@@ -1,3 +1,5 @@
+using PerfXml.Generator.Internal;
+
 namespace PerfXml.Generator;
 
 [Generator]
@@ -11,11 +13,11 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 
 	public void Initialize(GeneratorInitializationContext context) {
 		context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
-// #if DEBUG
-// 		if (Debugger.IsAttached is false) {
-// 			Debugger.Launch();
-// 		}
-// #endif
+#if DEBUG
+		if (Debugger.IsAttached is false) {
+			Debugger.Launch();
+		}
+#endif
 	}
 
 	public void Execute(GeneratorExecutionContext context) {
@@ -176,8 +178,8 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		foreach (var (_, v) in classes
 					.Where(x => x.Value.AlreadyHasEmptyConstructor)
 					.ToArray()) {
-			v.XmlAttributes.RemoveAll(x => x.Type.IsList());
-			v.XmlBodies.RemoveAll(x => x.Type.IsList());
+			v.XmlAttributes.RemoveAll(x => x.OriginalType.IsList());
+			v.XmlBodies.RemoveAll(x => x.OriginalType.IsList());
 		}
 
 		foreach (var (_, v) in classes) {
@@ -185,8 +187,8 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 				v.InheritedFromSerializable = true;
 			}
 
-			if (v.XmlAttributes.Any(x => x.Type is ITypeParameterSymbol)
-			 || v.XmlBodies.Any(x => x.Type is ITypeParameterSymbol)) {
+			if (v.XmlAttributes.Any(x => x.OriginalType is ITypeParameterSymbol)
+			 || v.XmlBodies.Any(x => x.OriginalType is ITypeParameterSymbol)) {
 				v.HaveGenericElements = true;
 			}
 		}
@@ -214,11 +216,13 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		writer.WriteLine("using PerfXml.Str;");
 		writer.WriteLine();
 		writer.WriteLine($"namespace {containingNamespace};");
+		writer.WriteLine();
 
 		foreach (var cls in enumerable) {
 			using (NestedClassScope.Start(writer, cls.Symbol, cls.InheritedFromSerializable is false)) {
 				if (cls.Symbol.IsAbstract is false) {
-					using (NestedScope.Start(writer, $"static {cls.Symbol.Name}()")) {
+					writer.WriteLine($"static {cls.Symbol.Name}()");
+					using (NestedScope.Start(writer)) {
 						var name = cls.Symbol.Name;
 						if (cls.Symbol.IsGenericType) {
 							var t = cls.Symbol.ToString()!;
@@ -249,9 +253,23 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 	}
 
 	private string GetPutAttributeAction(BaseMemberGenInfo m) {
-		var writerAction = m.Type.Name switch {
-			"String" => $"buffer.PutAttribute(\"{m.XmlName}\", {m.Symbol.Name});",
+		var type = m.Type;
+		var name = m.Symbol.Name;
+		string? preCheck = null;
+		if (m.Type.IfValueNullableGetInnerType() is { } t) {
+			type = t;
+			preCheck = $"if ({name}.HasValue) ";
+			name += ".Value";
+		}
+
+		if (type.IsEnum()) {
+			return $"{preCheck}buffer.PutEnumValue(\"{m.XmlName}\", {name})";
+		}
+
+		var writerAction = type.Name switch {
+			"String" => $"buffer.PutAttribute(\"{m.XmlName}\", {name});",
 			"Byte"
+				or "Int16"
 				or "Int32"
 				or "UInt32"
 				or "Int64"
@@ -259,64 +277,98 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 				or "Decimal"
 				or "Char"
 				or "Boolean"
-				or "Guid" => $"buffer.PutAttributeValue(\"{m.XmlName}\", {m.Symbol.Name});",
-			_ => throw new($"no attribute writer for type {m.Type.Name}")
+				or "Guid"
+				or "DateOnly"
+				or "TimeOnly"
+				or "DateTime" => $"buffer.PutAttributeValue(\"{m.XmlName}\", {name});",
+			_ => throw new($"no attribute writer for type {type}")
 		};
-		return writerAction;
+		return $"{preCheck}{writerAction}";
 	}
 
-	private string GetParseAction(BaseMemberGenInfo m) {
-		var readCommand = m.Type.Name switch {
-			"String"  => "value.ToString()",
-			"Byte"    => "StrReader.ParseByte(value)",
-			"Int32"   => "StrReader.ParseInt(value)",
-			"UInt32"  => "StrReader.ParseUInt(value)",
-			"Int64"   => "StrReader.ParseLong(value)",
-			"Double"  => "StrReader.ParseDouble(value)",
-			"Decimal" => "StrReader.ParseDecimal(value)",
-			"Char"    => "StrReader.ParseChar(value)",
-			"Boolean" => "StrReader.InterpretBool(value)",
-			"Guid"    => "StrReader.ParseGuid(value)",
-			_         => throw new($"no attribute reader for {m.Type.Name}")
-		};
-		return readCommand;
-	}
+	// private string GetParseAction(BaseMemberGenInfo m) {
+	// 	var type = m.Type;
+	// 	if (m.Type.IfValueNullableGetInnerType() is { } t) {
+	// 		type = t;
+	// 	}
+	//
+	// 	if (type.IsEnum()) {
+	// 		return $"StrReader.ParseEnum<{type.Name}>(value)";
+	// 	}
+	//
+	// 	var readCommand = type.Name switch {
+	// 		"String"   => "value.ToString()",
+	// 		"Byte"     => "StrReader.ParseByte(value)",
+	// 		"Int16"    => "StrReader.ParseShort(value)",
+	// 		"Int32"    => "StrReader.ParseInt(value)",
+	// 		"UInt32"   => "StrReader.ParseUInt(value)",
+	// 		"Int64"    => "StrReader.ParseLong(value)",
+	// 		"Double"   => "StrReader.ParseDouble(value)",
+	// 		"Decimal"  => "StrReader.ParseDecimal(value)",
+	// 		"Char"     => "StrReader.ParseChar(value)",
+	// 		"Boolean"  => "StrReader.InterpretBool(value)",
+	// 		"Guid"     => "StrReader.ParseGuid(value)",
+	// 		"DateOnly" => "StrReader.ParseDateOnly(value)",
+	// 		"TimeOnly" => "StrReader.ParseTimeOnly(value)",
+	// 		"DateTime" => "StrReader.ParseDateTime(value)",
+	// 		_          => throw new($"no attribute reader for {type}")
+	// 	};
+	// 	return readCommand;
+	// }
 
-	public static string GetWriterForType(string type, string toWrite) {
-		var result = type switch {
-			"String"  => $"writer.PutString({toWrite})",
-			"SpanStr" => $"writer.PutString({toWrite})",
-			"Byte"
-				or "Int32"
-				or "UInt32"
-				or "Int64"
-				or "Double"
-				or "Decimal"
-				or "Char"
-				or "Boolean"
-				or "Guid" => $"writer.PutValue({toWrite});",
-			_ => throw new($"GetWriterForType: {type} is missing")
-		};
-		return result;
-	}
+	// public static string GetWriterForType(ITypeSymbol type, string toWrite) {
+	// 	var t = type;
+	// 	if (type.IfValueNullableGetInnerType() is { } inner) {
+	// 		t = inner;
+	// 		toWrite += ".GetValueOrDefault()";
+	// 	}
+	//
+	// 	var result = t.Name switch {
+	// 		"String"  => $"writer.PutString({toWrite})",
+	// 		"ReadOnlySpan<char>" => $"writer.PutString({toWrite})",
+	// 		"Byte"
+	// 			or "Int16"
+	// 			or "Int32"
+	// 			or "UInt32"
+	// 			or "Int64"
+	// 			or "Double"
+	// 			or "Decimal"
+	// 			or "Char"
+	// 			or "Boolean"
+	// 			or "Guid"
+	// 			or "DateOnly"
+	// 			or "TimeOnly"
+	// 			or "DateTime" => $"writer.PutValue({toWrite});",
+	// 		_ => throw new($"GetWriterForType: {type} is missing")
+	// 	};
+	// 	return result;
+	// }
 
-	public static string GetReaderForType(string type) {
-		var result = type switch {
-			"String"  => "reader.GetString().ToString()",
-			"SpanStr" => "reader.GetSpanString()",
-			"Byte"    => "reader.GetByte()",
-			"Int32"   => "reader.GetInt()",
-			"UInt32"  => "reader.GetUInt()",
-			"Int64"   => "reader.GetLong()",
-			"Double"  => "reader.GetDouble()",
-			"Decimal" => "reader.GetDecimal()",
-			"Char"    => "reader.GetChar()",
-			"Boolean" => "reader.GetBoolean()",
-			"Guid"    => "reader.GetGuid()",
-			_         => throw new($"GetReaderForType: {type} is missing")
-		};
-		return result;
-	}
+	// public static string GetReaderForType(ITypeSymbol type) {
+	// 	if (type.IsEnum()) {
+	// 		return $"reader.GetEnumValue<{type.Name}>()";
+	// 	}
+	//
+	// 	var result = type.Name switch {
+	// 		"String"   => "reader.GetString().ToString()",
+	// 		"ReadOnlySpan<char>"  => "reader.GetReadOnlySpan<char>ing()",
+	// 		"Byte"     => "reader.GetByte()",
+	// 		"Int16"    => "reader.GetShort()",
+	// 		"Int32"    => "reader.GetInt()",
+	// 		"UInt32"   => "reader.GetUInt()",
+	// 		"Int64"    => "reader.GetLong()",
+	// 		"Double"   => "reader.GetDouble()",
+	// 		"Decimal"  => "reader.GetDecimal()",
+	// 		"Char"     => "reader.GetChar()",
+	// 		"Boolean"  => "reader.GetBoolean()",
+	// 		"Guid"     => "reader.GetGuid()",
+	// 		"DateOnly" => "reader.GetDateOnly()",
+	// 		"TimeOnly" => "reader.GetTimeOnly()",
+	// 		"DateTime" => "reader.GetDateTime()",
+	// 		_          => throw new($"GetReaderForType: {type} is missing")
+	// 	};
+	// 	return result;
+	// }
 
 	private static ulong HashName(ReadOnlySpan<char> name) {
 		var hashedValue = 0x2AAAAAAAAAAAAB67ul;

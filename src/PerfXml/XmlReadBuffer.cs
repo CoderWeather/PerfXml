@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.Net;
-using PerfXml.Str;
 
 namespace PerfXml;
+
+public delegate bool UnsafeReadAction(Span<char> span, out uint charsWritten);
 
 /// <summary>Stack based XML deserializer</summary>
 public ref struct XmlReadBuffer {
@@ -34,12 +35,14 @@ public ref struct XmlReadBuffer {
 	/// <param name="closeBraceIdx">Index in <param name="currSpan"/> which is at the end of the node declaration</param>
 	/// <param name="position">Starting position within <param name="currSpan"/></param>
 	/// <param name="obj">Object to receive parsed data</param>
+	/// <param name="resolver"></param>
 	/// <exception cref="InvalidDataException">Unable to parse data</exception>
 	/// <returns>Position within <param name="currSpan"/> which is at the end of the attribute list</returns>
 	private int DeserializeAttributes<T>(ReadOnlySpan<char> currSpan,
 		int closeBraceIdx,
 		int position,
-		T obj
+		T obj,
+		IXmlFormatterResolver resolver
 	) where T : IXmlSerialization {
 		while (position < closeBraceIdx) {
 			var spaceSpan = currSpan.Slice(position, closeBraceIdx - position);
@@ -66,7 +69,7 @@ public ref struct XmlReadBuffer {
 			var attributeValueDecoded = DecodeText(attributeValue);
 
 			var nameHash = IXmlSerialization.HashName(attributeName);
-			var assigned = obj.ParseAttribute(ref this, nameHash, attributeValueDecoded);
+			var assigned = obj.ParseAttribute(ref this, nameHash, attributeValueDecoded, resolver);
 			// if (abort)
 			// 	return -1;
 			if (!assigned)
@@ -84,11 +87,13 @@ public ref struct XmlReadBuffer {
 	/// <summary>Parse an XML node and children into structured class <param name="obj"/></summary>
 	/// <param name="span">Text to parse</param>
 	/// <param name="obj">Object to receive parsed data</param>
+	/// <param name="resolver"></param>
 	/// <returns>Position within <param name="span"/> that the node ends at</returns>
 	/// <exception cref="InvalidDataException">Unable to parse data</exception>
 	/// <exception cref="Exception">Internal error</exception>
-	private int ReadInto<T>(ReadOnlySpan<char> span, T obj)
+	private int ReadInto<T>(ReadOnlySpan<char> span, T obj, IXmlFormatterResolver? resolver = null)
 		where T : IXmlSerialization {
+		resolver ??= Xml.DefaultResolver;
 		depth++;
 		if (depth >= MaxDepth) {
 			throw new($"maximum depth {MaxDepth} reached");
@@ -170,7 +175,7 @@ public ref struct XmlReadBuffer {
 
 				if (spaceIdx != -1) {
 					afterAttrs = spaceIdx + 1; // skip space
-					afterAttrs = DeserializeAttributes(currSpan, closeBraceIdx, afterAttrs, obj);
+					afterAttrs = DeserializeAttributes(currSpan, closeBraceIdx, afterAttrs, obj, resolver);
 					// if (abort) {
 					// 	depth--;
 					// 	return -1;
@@ -199,7 +204,7 @@ public ref struct XmlReadBuffer {
 
 				var endIdx = unassignedIdx;
 
-				var handled = obj.ParseFullBody(ref this, bodySpan, ref endIdx);
+				var handled = obj.ParseFullBody(ref this, bodySpan, ref endIdx, resolver);
 				// if (abort) {
 				// 	depth--;
 				// 	return -1;
@@ -240,14 +245,16 @@ public ref struct XmlReadBuffer {
 					currSpan,
 					innerBodySpan,
 					ref endIdx,
-					ref endInnerIdx);
+					ref endInnerIdx,
+					resolver);
 				if (parsedSub is false) {
 					parsedSub = obj.ParseSubBody(ref this,
 						nodeName,
 						currSpan,
 						innerBodySpan,
 						ref endIdx,
-						ref endInnerIdx);
+						ref endInnerIdx,
+						resolver);
 				}
 				// if (abort) {
 				// 	depth--;
@@ -278,7 +285,12 @@ public ref struct XmlReadBuffer {
 		return span.Length;
 	}
 
-	private static SpanStr DeserializeElementRawInnerText(ReadOnlySpan<char> span, out int endEndIdx) {
+	public T Deserialize<T>(ReadOnlySpan<char> span, IXmlFormatterResolver resolver) {
+		var f = resolver.GetRequiredFormatter<T>();
+		return f.Parse(span, resolver);
+	}
+
+	private static ReadOnlySpan<char> DeserializeElementRawInnerText(ReadOnlySpan<char> span, out int endEndIdx) {
 		endEndIdx = span.IndexOf('<'); // find start of next node
 		if (endEndIdx == -1) {
 			throw new InvalidDataException("unable to find end of text");
@@ -291,12 +303,12 @@ public ref struct XmlReadBuffer {
 	/// <summary>Decode XML encoded text</summary>
 	/// <param name="input"></param>
 	/// <returns>Decoded text</returns>
-	private static SpanStr DecodeText(ReadOnlySpan<char> input) {
+	private static ReadOnlySpan<char> DecodeText(ReadOnlySpan<char> input) {
 		var andIndex = input.IndexOf('&');
 		if (andIndex == -1)
 			// no need to decode :)
-			return new(input);
-		return new(WebUtility.HtmlDecode(input.ToString())); // todo: allocates input as string, gross
+			return input;
+		return WebUtility.HtmlDecode(input.ToString()); // todo: allocates input as string, gross
 	}
 
 	/// <summary>
@@ -306,7 +318,7 @@ public ref struct XmlReadBuffer {
 	/// <param name="endEndIdx">The index of the end of the text within <see cref="span"/></param>
 	/// <returns>Deserialized inner text data</returns>
 	/// <exception cref="InvalidDataException">The bounds of the text could not be determined</exception>
-	public SpanStr DeserializeCDATA(ReadOnlySpan<char> span, out int endEndIdx) {
+	public ReadOnlySpan<char> DeserializeString(ReadOnlySpan<char> span, out int endEndIdx) {
 		if (cDataMode == CDataMode.Off)
 			return DeserializeElementRawInnerText(span, out endEndIdx);
 		// todo: CDATA cannot contain the string "]]>" anywhere in the XML document.
@@ -323,7 +335,7 @@ public ref struct XmlReadBuffer {
 		var stringData = span.Slice(CDataStart.Length, endIdx - CDataStart.Length);
 		return cDataMode == CDataMode.OnEncode
 			? DecodeText(stringData)
-			: new(stringData);
+			: stringData;
 	}
 
 	public ReadOnlySpan<char> ReadNodeValue(ReadOnlySpan<char> span, out int endEndIdx) {
@@ -341,9 +353,10 @@ public ref struct XmlReadBuffer {
 	/// </summary>
 	/// <param name="span">Text to parse</param>
 	/// <param name="end">Index into <param name="span"/> that is at the end of the node</param>
+	/// <param name="resolver"></param>
 	/// <typeparam name="T">Type to parse</typeparam>
 	/// <returns>The created instance</returns>
-	public T Read<T>(ReadOnlySpan<char> span, out int end)
+	public T Read<T>(ReadOnlySpan<char> span, out int end, IXmlFormatterResolver? resolver = null)
 		where T : IXmlSerialization, new() {
 		var t = new T();
 		end = ReadInto(span, t);
@@ -351,28 +364,14 @@ public ref struct XmlReadBuffer {
 	}
 
 	/// <summary>
-	/// The same as <see cref="Read{T}(System.ReadOnlySpan{char},out int)"/> but without the `end` out parameter
+	/// The same as <see cref="Read{T}(System.ReadOnlySpan{char},out int,PerfXml.IXmlFormatterResolver?)"/> but without the `end` out parameter
 	/// </summary>
 	/// <param name="span">Text to parse</param>
+	/// <param name="resolver"></param>
 	/// <typeparam name="T">Type to parse</typeparam>
 	/// <returns>The created instance</returns>
-	public T Read<T>(ReadOnlySpan<char> span)
+	public T Read<T>(ReadOnlySpan<char> span, IXmlFormatterResolver? resolver = null)
 		where T : IXmlSerialization, new() {
 		return Read<T>(span, out _);
-	}
-
-	/// <summary>
-	/// Parse into a new instance <typeparam name="T"/> without manually creating a XmlReadBuffer
-	/// </summary>
-	/// <param name="span">Text to parse</param>
-	/// <param name="cdataMode"><see cref="cDataMode"/></param>
-	/// <typeparam name="T">Type to parse</typeparam>
-	/// <returns>The created instance</returns>
-	public static T ReadStatic<T>(ReadOnlySpan<char> span, CDataMode cdataMode = CDataMode.Off)
-		where T : IXmlSerialization, new() {
-		var reader = new XmlReadBuffer {
-			cDataMode = cdataMode
-		};
-		return reader.Read<T>(span);
 	}
 }
