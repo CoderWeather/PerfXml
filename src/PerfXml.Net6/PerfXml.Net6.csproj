@@ -2,11 +2,27 @@
 
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>PerfXml</RootNamespace>
+        <AssemblyName>PerfXml.Net6</AssemblyName>
         <PackageId>PerfXml.Net6</PackageId>
     </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageId>PerfXml</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Ilya Pogodin</Authors>
+        <Description>Fast and low memory consumption C# XML serialization\deserialization engine with source generators. Contains formatters for types which was included in .net 6</Description>
+        <RepositoryUrl>https://github.com/CoderWeather/PerfXml</RepositoryUrl>
+        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+        <PackageTags>xml c# perfxml</PackageTags>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="../../LICENSE" Pack="true" PackagePath="" Visible="false"/>
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\PerfXml\PerfXml.csproj"/>
