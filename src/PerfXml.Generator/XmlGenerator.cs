@@ -211,19 +211,6 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 
 		foreach (var cls in enumerable)
 			using (NestedClassScope.Start(writer, cls.Symbol, cls.InheritedFromSerializable is false)) {
-				/*if (cls.Symbol.IsAbstract is false) {
-					writer.WriteLine($"static {cls.Symbol.Name}()");
-					using (NestedScope.Start(writer)) {
-						var name = cls.Symbol.Name;
-						if (cls.Symbol.IsGenericType) {
-							var t = cls.Symbol.ToString()!;
-							name = t[(t.LastIndexOf('.') + 1)..];
-						}
-
-						writer.WriteLine($"NodeNamesCollector.RegisterFor<{name}>(\"{cls.ClassName}\");");
-					}
-				}*/
-
 				if (cls.InheritedClassName is false) {
 					writer.WriteLine("public{0} ReadOnlySpan<char> GetNodeName() => \"{1}\";",
 						cls.AdditionalMethodsModifiers,
