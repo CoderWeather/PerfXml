@@ -10,8 +10,9 @@ public sealed class StaticCompositeResolver : IXmlFormatterResolver {
 			throw new InvalidOperationException("Cannot add new formatters when resolver already being used");
 
 		Instance.formatters.Clear();
-		foreach (var f in formatters)
+		foreach (var f in formatters) {
 			Instance.formatters[f.Type().Type] = f;
+		}
 
 		return Instance;
 	}
