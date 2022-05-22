@@ -227,7 +227,6 @@ public ref struct XmlReadBuffer {
 			else {
 				// read child nodes
 
-				// todo: i would like to use nullable but the language doesn't like it (can't "out int" into "ref int?")
 				var endIdx = unassignedIdx;
 				var endInnerIdx = unassignedIdx;
 
@@ -248,28 +247,40 @@ public ref struct XmlReadBuffer {
 						ref endIdx,
 						ref endInnerIdx,
 						resolver);
-				// if (abort) {
-				// 	depth--;
-				// 	return -1;
-				// }
 
-				if (parsedSub) {
-					if (endIdx != unassignedIdx) {
-						i += endIdx;
-						continue;
+				if (parsedSub is false) {
+					// Full node skip if not found member to read
+					var i1 = 0;
+					var i2 = 1;
+
+					while (i1 < innerBodySpan.Length) {
+						var ch1 = innerBodySpan[i1];
+						var ch2 = innerBodySpan[i2];
+						if (ch1 is '<' && ch2 is '/') {
+							// (1 + nodeName.Length + 1) = "/name>"
+							endInnerIdx = i + 1 + nodeName.Length + 1;
+							break;
+						}
+
+						i1++;
+						i2++;
 					}
-
-					if (endInnerIdx != unassignedIdx) {
-						// (3 + nodeName.Length) = </name>
-						i += closeBraceIdx + 1 + endInnerIdx + 3 + nodeName.Length;
-						continue;
-					}
-
-					throw new(
-						"one of endIdx or endInnerIdx should be set if returning true from ParseSubBody");
 				}
 
-				throw new InvalidDataException($"Unknown sub body {nodeName.ToString()} on {obj.GetType()}");
+				if (endIdx != unassignedIdx) {
+					i += endIdx;
+					continue;
+				}
+
+				if (endInnerIdx != unassignedIdx) {
+					// (3 + nodeName.Length) = "</name>"
+					i += closeBraceIdx + 1 + endInnerIdx + 3 + nodeName.Length;
+					continue;
+				}
+
+				throw new("one of endIdx or endInnerIdx should be set if returning true from ParseSubBody");
+
+				// throw new InvalidDataException($"Unknown sub body {nodeName.ToString()} on {obj.GetType()}");
 			}
 		}
 

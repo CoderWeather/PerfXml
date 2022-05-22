@@ -42,7 +42,9 @@ public interface IXmlSerialization {
 
 	public void SerializeAttributes(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver);
 
-	public void Serialize(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver);
+	public void Serialize(ref XmlWriteBuffer buffer,
+		IXmlFormatterResolver resolver,
+		ReadOnlySpan<char> nodeName = default);
 
 	/// <summary>Calculate fast hash of attribute/node name</summary>
 	/// <param name="name">Name to hash</param>

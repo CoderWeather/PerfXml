@@ -5,7 +5,7 @@ public sealed class StaticCompositeResolver : IXmlFormatterResolver {
 	public static readonly StaticCompositeResolver Instance = new();
 	private bool isStartedCaching;
 
-	public static StaticCompositeResolver WithFormatters(params IXmlFormatter[] formatters) {
+	public StaticCompositeResolver WithFormatters(params IXmlFormatter[] formatters) {
 		if (Instance.isStartedCaching)
 			throw new InvalidOperationException("Cannot add new formatters when resolver already being used");
 
@@ -17,7 +17,7 @@ public sealed class StaticCompositeResolver : IXmlFormatterResolver {
 		return Instance;
 	}
 
-	public static StaticCompositeResolver WithResolvers(params IXmlFormatterResolver[] resolvers) {
+	public StaticCompositeResolver WithResolvers(params IXmlFormatterResolver[] resolvers) {
 		if (Instance.isStartedCaching)
 			throw new InvalidOperationException("Cannot add new resolvers when resolver already being used");
 
@@ -28,7 +28,7 @@ public sealed class StaticCompositeResolver : IXmlFormatterResolver {
 		return Instance;
 	}
 
-	public static StaticCompositeResolver With(IXmlFormatter[] formatters, IXmlFormatterResolver[] resolvers) {
+	public StaticCompositeResolver With(IXmlFormatter[] formatters, IXmlFormatterResolver[] resolvers) {
 		if (Instance.isStartedCaching)
 			throw new InvalidOperationException(
 				"Cannot add new formatters or resolvers when resolver already being used");

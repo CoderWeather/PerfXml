@@ -28,9 +28,7 @@ public ref struct XmlWriteBuffer {
 	/// Create a new XmlWriteBuffer
 	/// </summary>
 	/// <returns>XmlWriteBuffer instance</returns>
-	public static XmlWriteBuffer Create() {
-		return new(0);
-	}
+	public static XmlWriteBuffer Create() => new(0);
 
 	/// <summary>
 	/// Actual XmlWriteBuffer constructor
@@ -112,11 +110,14 @@ public ref struct XmlWriteBuffer {
 
 	public void WriteNodeValue<T>(ReadOnlySpan<char> name, T value, IXmlFormatterResolver resolver) {
 		var node = StartNodeHead(name);
-		Write(value, resolver);
+		Write(value, resolver, true);
 		EndNode(ref node);
 	}
 
-	public void Write<T>(T value, IXmlFormatterResolver resolver) {
+	public void Write<T>(T value, IXmlFormatterResolver resolver, bool closePrevNode = false) {
+		if (closePrevNode) {
+			CloseNodeHeadForBodyIfOpen();
+		}
 		int charsWritten;
 		while (resolver.TryWriteTo(WriteSpan, value, out charsWritten) is false)
 			Resize();
@@ -203,14 +204,13 @@ public ref struct XmlWriteBuffer {
 	/// <returns>Serialized XML</returns>
 	internal static ReadOnlySpan<char> SerializeStatic<T>(T obj,
 		CDataMode cdataMode = CDataMode.Off,
-		IXmlFormatterResolver? resolver = null)
-		where T : IXmlSerialization {
+		IXmlFormatterResolver? resolver = null
+	) where T : IXmlSerialization {
 		resolver ??= Xml.DefaultResolver;
 		if (obj == null)
 			throw new ArgumentNullException(nameof(obj));
-		var writer = new XmlWriteBuffer {
-			CdataMode = cdataMode
-		};
+		var writer = Create();
+		writer.CdataMode = cdataMode;
 		try {
 			obj.Serialize(ref writer, resolver);
 			var span = writer.ToSpan();

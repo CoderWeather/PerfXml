@@ -15,7 +15,7 @@ public sealed class EnumResolver : IXmlFormatterResolver {
 
 		static Cache() {
 			var type = typeof(T);
-			if (type.IsValueType is false || type.IsEnum)
+			if (type.IsValueType is false || type.IsEnum is false)
 				return;
 
 			var instance = Activator.CreateInstance(typeof(EnumFormatter<>).MakeGenericType(type));

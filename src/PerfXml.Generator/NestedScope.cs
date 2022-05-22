@@ -83,12 +83,12 @@ internal sealed class NestedClassScope : IDisposable {
 	private static string GetClsString(INamedTypeSymbol type) {
 		// {public/private...} {ref} partial {class/struct} {name}
 		const string f = "{0} {1}partial {2} {3}";
-		var symbolStr = type.ToString()!;
+		var fullName = type.ToString()!;
 		var str = string.Format(f,
 			type.DeclaredAccessibility.ToString().ToLowerInvariant(),
 			type.IsRefLikeType ? "ref " : string.Empty,
 			TypeKindToStr(type),
-			symbolStr[(symbolStr.LastIndexOf('.') + 1)..]
+			fullName[(fullName.LastIndexOf('.') + 1)..]
 		);
 		return str;
 	}

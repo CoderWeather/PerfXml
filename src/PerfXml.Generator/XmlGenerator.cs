@@ -13,11 +13,11 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 
 	public void Initialize(GeneratorInitializationContext context) {
 		context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
-#if DEBUG
-		if (Debugger.IsAttached is false) {
-			Debugger.Launch();
-		}
-#endif
+// #if DEBUG
+// 		if (Debugger.IsAttached is false) {
+// 			Debugger.Launch();
+// 		}
+// #endif
 	}
 
 	public void Execute(GeneratorExecutionContext context) {
@@ -211,7 +211,7 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 
 		foreach (var cls in enumerable)
 			using (NestedClassScope.Start(writer, cls.Symbol, cls.InheritedFromSerializable is false)) {
-				if (cls.Symbol.IsAbstract is false) {
+				/*if (cls.Symbol.IsAbstract is false) {
 					writer.WriteLine($"static {cls.Symbol.Name}()");
 					using (NestedScope.Start(writer)) {
 						var name = cls.Symbol.Name;
@@ -222,13 +222,14 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 
 						writer.WriteLine($"NodeNamesCollector.RegisterFor<{name}>(\"{cls.ClassName}\");");
 					}
-				}
+				}*/
 
-				if (cls.InheritedClassName is false)
+				if (cls.InheritedClassName is false) {
 					writer.WriteLine("public{0} ReadOnlySpan<char> GetNodeName() => \"{1}\";",
 						cls.AdditionalMethodsModifiers,
 						cls.ClassName
 					);
+				}
 
 				WriteParseBody(writer, cls);
 				WriteParseAttribute(writer, cls);

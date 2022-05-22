@@ -158,7 +158,7 @@ internal partial class XmlGenerator {
 					isFirst = false;
 
 				writer.WriteLine(
-					$"if (nodeName.Equals(NodeNamesCollector.GetFor<{body.OriginalType}>(), StringComparison.Ordinal))"
+					$"if (nodeName.Equals(NodeNamesCollector.GetFor<{body.Type}>(), StringComparison.Ordinal))"
 				);
 				using (NestedScope.Start(writer)) {
 					writer.WriteLines(
@@ -268,23 +268,23 @@ internal partial class XmlGenerator {
 				}
 				// another IXmlSerialization
 				else if (body.OriginalType.IsPrimitive() is false) {
-					writer.WriteLine($"this.{body.Symbol.Name}.Serialize(ref buffer, resolver);");
+					var nodeNameArg = body.XmlName is not null ? $", \"{body.XmlName}\"" : null;
+					writer.WriteLine($"this.{body.Symbol.Name}.Serialize(ref buffer, resolver{nodeNameArg});");
 				}
 				else {
 					NestedScope? nodeScope = null;
-					if (body.XmlName is not null) {
-						if (isCanBeNull is false)
-							nodeScope = NestedScope.Start(writer);
 
-						writer.WriteLine($"var node = buffer.StartNodeHead(\"{body.XmlName}\");");
+					if (isCanBeNull is false) {
+						nodeScope = NestedScope.Start(writer);
 					}
 
-					writer.WriteLine($"buffer.Write(this.{body.Symbol.Name}, resolver);");
+					writer.WriteLine(
+						body.XmlName is not null
+							? $"buffer.WriteNodeValue(\"{body.XmlName}\", this.{body.Symbol.Name}, resolver);"
+							: $"buffer.Write(this.{body.Symbol.Name}, resolver);"
+					);
 
-					if (body.XmlName is not null) {
-						writer.WriteLine("buffer.EndNode(ref node);");
-						nodeScope?.Close();
-					}
+					nodeScope?.Close();
 				}
 
 				isNotNullScope?.Close();
@@ -310,8 +310,6 @@ internal partial class XmlGenerator {
 
 			foreach (var field in cls.XmlAttributes)
 				if (field.SplitChar is not null) {
-					// var namedType = (INamedTypeSymbol)field.OriginalType;
-					// var typeToRead = namedType.TypeArguments[0];
 
 					using (NestedScope.Start(writer)) {
 						writer.WriteLines(
@@ -341,12 +339,16 @@ internal partial class XmlGenerator {
 		if (cls.InheritedFromSerializable)
 			return;
 
-		writer.WriteLine("public void Serialize(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver)");
+		writer.WriteLine(
+			"public void Serialize(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver, ReadOnlySpan<char> nodeName = default)"
+		);
 		using (NestedScope.Start(writer)) {
-			writer.WriteLine("var node = buffer.StartNodeHead(GetNodeName());");
-			writer.WriteLine("SerializeAttributes(ref buffer, resolver);");
-			writer.WriteLine("SerializeBody(ref buffer, resolver);");
-			writer.WriteLine("buffer.EndNode(ref node);");
+			writer.WriteLines(
+				"var node = buffer.StartNodeHead(nodeName.IsEmpty ? GetNodeName() : nodeName);",
+				"SerializeAttributes(ref buffer, resolver);",
+				"SerializeBody(ref buffer, resolver);",
+				"buffer.EndNode(ref node);"
+			);
 		}
 	}
 }

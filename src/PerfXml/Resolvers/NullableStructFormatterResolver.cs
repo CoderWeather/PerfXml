@@ -24,7 +24,7 @@ public sealed class NullableStructFormatterResolver : IXmlFormatterResolver {
 				return;
 
 			var resultType = type.GenericTypeArguments.First();
-			var instance = Activator.CreateInstance(resultType);
+			var instance = Activator.CreateInstance(NullableStructFormatterType.MakeGenericType(resultType));
 			Formatter = instance as IXmlFormatter<T>;
 		}
 	}

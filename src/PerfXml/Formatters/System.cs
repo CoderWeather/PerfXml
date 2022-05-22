@@ -109,7 +109,7 @@ public sealed class StringFormatter : IXmlFormatter<string?> {
 	}
 
 	public string? Parse(ReadOnlySpan<char> span, IXmlFormatterResolver resolver) {
-		throw new NotImplementedException();
+		return span.Length > 0 ? span.ToString() : null;
 	}
 }
 
