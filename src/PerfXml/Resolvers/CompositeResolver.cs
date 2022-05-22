@@ -6,22 +6,19 @@ public sealed class StaticCompositeResolver : IXmlFormatterResolver {
 	private bool isStartedCaching;
 
 	public static StaticCompositeResolver WithFormatters(params IXmlFormatter[] formatters) {
-		if (Instance.isStartedCaching) {
+		if (Instance.isStartedCaching)
 			throw new InvalidOperationException("Cannot add new formatters when resolver already being used");
-		}
 
 		Instance.formatters.Clear();
-		foreach (var f in formatters) {
+		foreach (var f in formatters)
 			Instance.formatters[f.Type().Type] = f;
-		}
 
 		return Instance;
 	}
 
 	public static StaticCompositeResolver WithResolvers(params IXmlFormatterResolver[] resolvers) {
-		if (Instance.isStartedCaching) {
+		if (Instance.isStartedCaching)
 			throw new InvalidOperationException("Cannot add new resolvers when resolver already being used");
-		}
 
 		if (resolvers == null)
 			throw new ArgumentNullException(nameof(resolvers));
@@ -31,24 +28,25 @@ public sealed class StaticCompositeResolver : IXmlFormatterResolver {
 	}
 
 	public static StaticCompositeResolver With(IXmlFormatter[] formatters, IXmlFormatterResolver[] resolvers) {
-		if (Instance.isStartedCaching) {
+		if (Instance.isStartedCaching)
 			throw new InvalidOperationException(
 				"Cannot add new formatters or resolvers when resolver already being used");
-		}
 
 		WithFormatters(formatters);
 		WithResolvers(resolvers);
 		return Instance;
 	}
 
-	public static void SetDefault() {
+	public void SetDefault() {
 		Xml.DefaultResolver = Instance;
 	}
 
 	private readonly Dictionary<Type, IXmlFormatter> formatters = new();
 	private IXmlFormatterResolver[] resolvers = Array.Empty<IXmlFormatterResolver>();
 
-	public IXmlFormatter<T>? GetFormatter<T>() => Cache<T>.Formatter;
+	public IXmlFormatter<T>? GetFormatter<T>() {
+		return Cache<T>.Formatter;
+	}
 
 	private static class Cache<T> {
 		public static readonly IXmlFormatter<T>? Formatter;
@@ -62,12 +60,11 @@ public sealed class StaticCompositeResolver : IXmlFormatterResolver {
 				return;
 			}
 
-			foreach (var r in Instance.resolvers) {
+			foreach (var r in Instance.resolvers)
 				if (r.GetFormatter<T>() is { } rf) {
 					Formatter = rf;
 					return;
 				}
-			}
 		}
 	}
 }

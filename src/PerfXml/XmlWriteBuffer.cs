@@ -28,7 +28,9 @@ public ref struct XmlWriteBuffer {
 	/// Create a new XmlWriteBuffer
 	/// </summary>
 	/// <returns>XmlWriteBuffer instance</returns>
-	public static XmlWriteBuffer Create() => new(0);
+	public static XmlWriteBuffer Create() {
+		return new(0);
+	}
 
 	/// <summary>
 	/// Actual XmlWriteBuffer constructor
@@ -116,9 +118,8 @@ public ref struct XmlWriteBuffer {
 
 	public void Write<T>(T value, IXmlFormatterResolver resolver) {
 		int charsWritten;
-		while (resolver.TryWriteTo(WriteSpan, value, out charsWritten) is false) {
+		while (resolver.TryWriteTo(WriteSpan, value, out charsWritten) is false)
 			Resize();
-		}
 
 		currentOffset += charsWritten;
 	}
@@ -161,9 +162,8 @@ public ref struct XmlWriteBuffer {
 		if (chars.Length == 0)
 			return;
 
-		while (chars.TryCopyTo(WriteSpan) is false) {
+		while (chars.TryCopyTo(WriteSpan) is false)
 			Resize();
-		}
 
 		currentOffset += chars.Length;
 	}
@@ -190,9 +190,8 @@ public ref struct XmlWriteBuffer {
 	/// <summary>Release internal buffer</summary>
 	public void Dispose() {
 		var b = buffer;
-		if (b is not null) {
+		if (b is not null)
 			ArrayPool<char>.Shared.Return(b);
-		}
 	}
 
 	/// <summary>

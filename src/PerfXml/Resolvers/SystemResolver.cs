@@ -19,18 +19,19 @@ public sealed class SystemResolver : IXmlFormatterResolver {
 		{ typeof(bool), BooleanFormatter.Instance },
 		{ typeof(string), StringFormatter.Instance },
 		{ typeof(Guid), GuidFormatter.Instance },
-		{ typeof(DateTime), DateTimeFormatter.Instance },
+		{ typeof(DateTime), DateTimeFormatter.Instance }
 	};
 
-	public IXmlFormatter<T>? GetFormatter<T>() => Cache<T>.Formatter;
+	public IXmlFormatter<T>? GetFormatter<T>() {
+		return Cache<T>.Formatter;
+	}
 
 	private static class Cache<T> {
 		public static readonly IXmlFormatter<T>? Formatter;
 
 		static Cache() {
-			if (Formatters.TryGetValue(typeof(T), out var formatter)) {
+			if (Formatters.TryGetValue(typeof(T), out var formatter))
 				Formatter = (IXmlFormatter<T>)formatter;
-			}
 		}
 	}
 }

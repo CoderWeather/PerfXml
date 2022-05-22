@@ -1,15 +1,17 @@
 namespace PerfXml.Generator;
 
 internal sealed class NestedScope : IDisposable {
-	private NestedScope(IndentedTextWriter writer) => this.writer = writer;
+	private NestedScope(IndentedTextWriter writer) {
+		this.writer = writer;
+	}
+
 	private readonly IndentedTextWriter writer;
 	private static readonly Stack<NestedScope> Stack = new();
 	private bool shouldCloseOnDispose = true;
 
 	public void Dispose() {
-		if (shouldCloseOnDispose) {
+		if (shouldCloseOnDispose)
 			Close();
-		}
 
 		Stack.Pop();
 	}

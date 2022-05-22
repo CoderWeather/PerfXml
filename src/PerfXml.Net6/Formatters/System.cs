@@ -2,7 +2,11 @@
 
 public sealed class DateOnlyFormatter : IXmlFormatter<DateOnly> {
 	private readonly string format;
-	public DateOnlyFormatter(string format = "yyyy-MM-dd") => this.format = format;
+
+	public DateOnlyFormatter(string format = "yyyy-MM-dd") {
+		this.format = format;
+	}
+
 	public static readonly DateOnlyFormatter Instance = new();
 
 	public bool TryWriteTo(Span<char> span, DateOnly value, out int charsWritten, IXmlFormatterResolver resolver) {
@@ -16,7 +20,11 @@ public sealed class DateOnlyFormatter : IXmlFormatter<DateOnly> {
 
 public sealed class TimeOnlyFormatter : IXmlFormatter<TimeOnly> {
 	private readonly string format;
-	public TimeOnlyFormatter(string format = "HH:mm") => this.format = format;
+
+	public TimeOnlyFormatter(string format = "HH:mm") {
+		this.format = format;
+	}
+
 	public static readonly TimeOnlyFormatter Instance = new();
 
 	public bool TryWriteTo(Span<char> span, TimeOnly value, out int charsWritten, IXmlFormatterResolver resolver) {

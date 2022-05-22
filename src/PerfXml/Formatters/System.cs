@@ -183,7 +183,11 @@ public sealed class GuidFormatter : IXmlFormatter<Guid> {
 
 public sealed class DateTimeFormatter : IXmlFormatter<DateTime> {
 	private readonly string format;
-	public DateTimeFormatter(string format = "yyyy-MM-dd HH:mm:ss") => this.format = format;
+
+	public DateTimeFormatter(string format = "yyyy-MM-dd HH:mm:ss") {
+		this.format = format;
+	}
+
 	public static readonly DateTimeFormatter Instance = new();
 
 	public bool TryWriteTo(Span<char> span, DateTime value, out int charsWritten, IXmlFormatterResolver resolver) {

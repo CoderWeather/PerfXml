@@ -9,7 +9,9 @@ public sealed class NullableStructFormatterResolver : IXmlFormatterResolver {
 	private static readonly Type NullableType = typeof(Nullable<>);
 	private static readonly Type NullableStructFormatterType = typeof(NullableStructFormatter<>);
 
-	public IXmlFormatter<T>? GetFormatter<T>() => Cache<T>.Formatter;
+	public IXmlFormatter<T>? GetFormatter<T>() {
+		return Cache<T>.Formatter;
+	}
 
 	private static class Cache<T> {
 		public static readonly IXmlFormatter<T>? Formatter;
@@ -18,9 +20,8 @@ public sealed class NullableStructFormatterResolver : IXmlFormatterResolver {
 			var type = typeof(T);
 			if (type.IsValueType is false
 			 || type.IsConstructedGenericType is false
-			 || type.GetGenericTypeDefinition() != NullableType) {
+			 || type.GetGenericTypeDefinition() != NullableType)
 				return;
-			}
 
 			var resultType = type.GenericTypeArguments.First();
 			var instance = Activator.CreateInstance(resultType);

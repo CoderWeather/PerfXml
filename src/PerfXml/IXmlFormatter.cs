@@ -3,11 +3,15 @@
 namespace PerfXml;
 
 public interface IXmlFormatter {
-	internal virtual TypeOf Type() => throw new InvalidOperationException();
+	internal virtual TypeOf Type() {
+		throw new InvalidOperationException();
+	}
 }
 
 public interface IXmlFormatter<T> : IXmlFormatter {
-	internal new TypeOf Type() => TypeOf.Get<T>();
+	internal new TypeOf Type() {
+		return TypeOf.Get<T>();
+	}
 
 	bool TryWriteTo(Span<char> span, T value, out int charsWritten, IXmlFormatterResolver resolver);
 

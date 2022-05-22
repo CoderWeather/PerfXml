@@ -85,17 +85,15 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		foreach (var field in receiver.Fields) {
 			var model = compilation.GetSemanticModel(field.SyntaxTree);
 			foreach (var variable in field.Declaration.Variables) {
-				if (ModelExtensions.GetDeclaredSymbol(model, variable) is not IFieldSymbol symbol) {
+				if (ModelExtensions.GetDeclaredSymbol(model, variable) is not IFieldSymbol symbol)
 					continue;
-				}
 
 				var fieldAttr = symbol.TryGetAttribute(fieldAttributeSymbol);
 				var bodyAttr = symbol.TryGetAttribute(bodyAttributeSymbol);
 				var splitAttr = symbol.TryGetAttribute(splitStringAttributeSymbol);
 
-				if (fieldAttr is null && bodyAttr is null) {
+				if (fieldAttr is null && bodyAttr is null)
 					continue;
-				}
 
 				if (classes.TryGetValue(symbol.ContainingType, out var classInfo) is false) {
 					classInfo = new(symbol.ContainingType);
@@ -113,25 +111,22 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 					classInfo.XmlBodies.Add(fieldInfo);
 				}
 
-				if (splitAttr?.ConstructorArguments[0].As<char>() is { } ch) {
+				if (splitAttr?.ConstructorArguments[0].As<char>() is { } ch)
 					fieldInfo.SplitChar = ch;
-				}
 			}
 		}
 
 		foreach (var prop in receiver.Properties) {
 			var model = compilation.GetSemanticModel(prop.SyntaxTree);
-			if (ModelExtensions.GetDeclaredSymbol(model, prop) is not IPropertySymbol symbol || symbol.IsAbstract) {
+			if (ModelExtensions.GetDeclaredSymbol(model, prop) is not IPropertySymbol symbol || symbol.IsAbstract)
 				continue;
-			}
 
 			var fieldAttr = symbol.TryGetAttribute(fieldAttributeSymbol);
 			var bodyAttr = symbol.TryGetAttribute(bodyAttributeSymbol);
 			var splitAttr = symbol.TryGetAttribute(splitStringAttributeSymbol);
 
-			if (fieldAttr is null && bodyAttr is null) {
+			if (fieldAttr is null && bodyAttr is null)
 				continue;
-			}
 
 			if (classes.TryGetValue(symbol.ContainingType, out var classInfo) is false) {
 				classInfo = new(symbol.ContainingType);
@@ -170,9 +165,8 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 				classInfo.XmlBodies.Add(propInfo);
 			}
 
-			if (splitAttr?.ConstructorArguments[0].As<char>() is { } ch) {
+			if (splitAttr?.ConstructorArguments[0].As<char>() is { } ch)
 				propInfo.SplitChar = ch;
-			}
 		}
 
 		foreach (var (_, v) in classes
@@ -183,14 +177,12 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		}
 
 		foreach (var (_, v) in classes) {
-			if (v.Symbol.HasBaseClass() && classes.ContainsKey(v.Symbol.BaseType!.OriginalDefinition)) {
+			if (v.Symbol.HasBaseClass() && classes.ContainsKey(v.Symbol.BaseType!.OriginalDefinition))
 				v.InheritedFromSerializable = true;
-			}
 
 			if (v.XmlAttributes.Any(x => x.OriginalType is ITypeParameterSymbol)
-			 || v.XmlBodies.Any(x => x.OriginalType is ITypeParameterSymbol)) {
+			 || v.XmlBodies.Any(x => x.OriginalType is ITypeParameterSymbol))
 				v.HaveGenericElements = true;
-			}
 		}
 
 		foreach (var group in classes
@@ -199,9 +191,8 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 						 SymbolEqualityComparer.Default)) {
 			var ns = group.Key!.ToString()!;
 			var source = ProcessClasses(ns, group);
-			if (source is null) {
+			if (source is null)
 				continue;
-			}
 
 			context.AddSource($"{nameof(XmlGenerator)}_{ns}.cs", SourceText.From(source, Encoding.UTF8));
 		}
@@ -218,7 +209,7 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		writer.WriteLine($"namespace {containingNamespace};");
 		writer.WriteLine();
 
-		foreach (var cls in enumerable) {
+		foreach (var cls in enumerable)
 			using (NestedClassScope.Start(writer, cls.Symbol, cls.InheritedFromSerializable is false)) {
 				if (cls.Symbol.IsAbstract is false) {
 					writer.WriteLine($"static {cls.Symbol.Name}()");
@@ -233,12 +224,11 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 					}
 				}
 
-				if (cls.InheritedClassName is false) {
+				if (cls.InheritedClassName is false)
 					writer.WriteLine("public{0} ReadOnlySpan<char> GetNodeName() => \"{1}\";",
 						cls.AdditionalMethodsModifiers,
 						cls.ClassName
 					);
-				}
 
 				WriteParseBody(writer, cls);
 				WriteParseAttribute(writer, cls);
@@ -246,7 +236,6 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 				WriteSerializeAttributes(writer, cls);
 				WriteSerialize(writer, cls);
 			}
-		}
 
 		var resultStr = writer.InnerWriter.ToString();
 		return resultStr;
@@ -262,9 +251,8 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 			name += ".Value";
 		}
 
-		if (type.IsEnum()) {
+		if (type.IsEnum())
 			return $"{preCheck}buffer.PutEnumValue(\"{m.XmlName}\", {name})";
-		}
 
 		var writerAction = type.Name switch {
 			"String" => $"buffer.PutAttribute(\"{m.XmlName}\", {name});",

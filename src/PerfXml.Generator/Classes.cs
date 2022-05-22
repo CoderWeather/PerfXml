@@ -35,7 +35,10 @@ internal sealed class ClassGenInfo {
 	public bool HaveGenericElements = false;
 
 	public string? ClassName;
-	public ClassGenInfo(INamedTypeSymbol symbol) => Symbol = symbol;
+
+	public ClassGenInfo(INamedTypeSymbol symbol) {
+		Symbol = symbol;
+	}
 
 	public string? AdditionalMethodsModifiers =>
 		InheritedFromSerializable

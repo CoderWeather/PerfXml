@@ -18,7 +18,9 @@ public ref struct StrReader {
 			: default;
 	}
 
-	public T ReadAndParse<T>(IXmlFormatterResolver resolver) => resolver.Parse<T>(GetString());
+	public T ReadAndParse<T>(IXmlFormatterResolver resolver) {
+		return resolver.Parse<T>(GetString());
+	}
 
 	public IReadOnlyList<string> ReadToEnd() {
 		var lst = new List<string>();
@@ -30,5 +32,7 @@ public ref struct StrReader {
 		return lst;
 	}
 
-	public bool HasRemaining() => enumerator.CanMoveNext();
+	public bool HasRemaining() {
+		return enumerator.CanMoveNext();
+	}
 }

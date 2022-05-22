@@ -18,9 +18,8 @@ public static class Xml {
 	public static IXmlFormatterResolver DefaultResolver {
 		get => defaultResolver;
 		set {
-			if (value != null!) {
+			if (value != null!)
 				defaultResolver = value;
-			}
 		}
 	}
 

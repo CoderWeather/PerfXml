@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\PerfXml\PerfXml.csproj" />
+        <ProjectReference Include="..\PerfXml\PerfXml.csproj"/>
     </ItemGroup>
 
 </Project>

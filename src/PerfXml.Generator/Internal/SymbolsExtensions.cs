@@ -83,9 +83,8 @@ internal static class SymbolsExtensions {
 		new(SymbolEqualityComparer.Default);
 
 	public static IEnumerable<INamedTypeSymbol> GetAllAncestors(this ITypeSymbol type) {
-		if (AncestorsCache.TryGetValue(type, out var ancestors)) {
+		if (AncestorsCache.TryGetValue(type, out var ancestors))
 			return ancestors;
-		}
 
 		AncestorsCache[type] = ancestors = type.GetAllAncestorsEnumerable().ToArray();
 

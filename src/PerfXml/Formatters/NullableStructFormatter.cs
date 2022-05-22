@@ -5,9 +5,8 @@ public sealed class NullableStructFormatter<T> : IXmlFormatter<T?>
 	public static readonly NullableStructFormatter<T> Instance = new();
 
 	public bool TryWriteTo(Span<char> span, T? value, out int charsWritten, IXmlFormatterResolver resolver) {
-		if (value.HasValue) {
+		if (value.HasValue)
 			return resolver.TryWriteTo(span, value.Value, out charsWritten);
-		}
 
 		charsWritten = 0;
 		return true;

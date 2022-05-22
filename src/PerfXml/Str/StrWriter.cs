@@ -42,12 +42,10 @@ public ref struct StrWriter {
 
 	public void Write<T>(T value, IXmlFormatterResolver resolver) {
 		PutSeparator();
-		if (resolver.TryWriteTo(Buffer, value, out var charsWritten)) {
+		if (resolver.TryWriteTo(Buffer, value, out var charsWritten))
 			currIdx += charsWritten;
-		}
-		else {
+		else
 			throw new InvalidOperationException();
-		}
 	}
 
 	public void PutRaw(char c) {
