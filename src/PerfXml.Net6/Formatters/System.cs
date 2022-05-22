@@ -16,7 +16,7 @@ public sealed class DateOnlyFormatter : IXmlFormatter<DateOnly> {
 
 public sealed class TimeOnlyFormatter : IXmlFormatter<TimeOnly> {
 	private readonly string format;
-	public TimeOnlyFormatter(string format = "HH:mm:ss") => this.format = format;
+	public TimeOnlyFormatter(string format = "HH:mm") => this.format = format;
 	public static readonly TimeOnlyFormatter Instance = new();
 
 	public bool TryWriteTo(Span<char> span, TimeOnly value, out int charsWritten, IXmlFormatterResolver resolver) {

@@ -31,23 +31,4 @@ public ref struct StrReader {
 	}
 
 	public bool HasRemaining() => enumerator.CanMoveNext();
-
-	// public static bool InterpretBool(ReadOnlySpan<char> val) {
-	// 	switch (val[0]) {
-	// 		case '0': return false;
-	// 		case '1': return true;
-	// 	}
-	//
-	// 	if (val.StartsWith("no", StringComparison.InvariantCultureIgnoreCase))
-	// 		return false;
-	// 	if (val.StartsWith("yes", StringComparison.InvariantCultureIgnoreCase))
-	// 		return true;
-	//
-	// 	if (val.StartsWith("false", StringComparison.InvariantCultureIgnoreCase))
-	// 		return false;
-	// 	if (val.StartsWith("true", StringComparison.InvariantCultureIgnoreCase))
-	// 		return true;
-	//
-	// 	throw new InvalidDataException($"unknown boolean \"{val.ToString()}\"");
-	// }
 }
