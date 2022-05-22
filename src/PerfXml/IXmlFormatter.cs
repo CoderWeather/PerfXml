@@ -3,13 +3,13 @@
 namespace PerfXml;
 
 public interface IXmlFormatter {
-	internal virtual TypeOf Type() {
+	public TypeOf Type() {
 		throw new InvalidOperationException();
 	}
 }
 
 public interface IXmlFormatter<T> : IXmlFormatter {
-	internal new TypeOf Type() {
+	TypeOf IXmlFormatter.Type() {
 		return TypeOf.Get<T>();
 	}
 

@@ -1,6 +1,6 @@
 ﻿namespace PerfXml.Internal;
 
-internal abstract record TypeOf {
+public abstract record TypeOf {
 	public abstract Type Type { get; }
 
 	public static TypeOf Get<T>() {
