@@ -35,7 +35,10 @@ internal sealed class ClassGenInfo {
 	public bool HaveGenericElements = false;
 
 	public string? ClassName;
-	public ClassGenInfo(INamedTypeSymbol symbol) => Symbol = symbol;
+
+	public ClassGenInfo(INamedTypeSymbol symbol) {
+		Symbol = symbol;
+	}
 
 	public string? AdditionalMethodsModifiers =>
 		InheritedFromSerializable
@@ -47,29 +50,32 @@ internal sealed class ClassGenInfo {
 
 internal abstract class BaseMemberGenInfo {
 	public ISymbol Symbol { get; }
-	public abstract ITypeSymbol Type { get; }
+	public ITypeSymbol OriginalType { get; }
+	public ITypeSymbol Type { get; }
 	public string? XmlName;
 	public char? SplitChar;
 
-	protected BaseMemberGenInfo(ISymbol symbol) => Symbol = symbol;
+	protected BaseMemberGenInfo(ISymbol symbol, ITypeSymbol type) {
+		Symbol = symbol;
+		Type = type;
+		OriginalType = Type.IsDefinition ? Type : Type.OriginalDefinition;
+	}
 }
 
 internal sealed class FieldGenInfo : BaseMemberGenInfo {
 	public new IFieldSymbol Symbol { get; }
-	public override ITypeSymbol Type { get; }
 
-	public FieldGenInfo(IFieldSymbol fieldSymbol) : base(fieldSymbol) {
+	public FieldGenInfo(IFieldSymbol fieldSymbol) :
+		base(fieldSymbol, fieldSymbol.Type) {
 		Symbol = fieldSymbol;
-		Type = Symbol.Type.IsDefinition ? Symbol.Type : Symbol.Type.OriginalDefinition;
 	}
 }
 
 internal sealed class PropertyGenInfo : BaseMemberGenInfo {
 	public new IPropertySymbol Symbol { get; }
-	public override ITypeSymbol Type { get; }
 
-	public PropertyGenInfo(IPropertySymbol propertySymbol) : base(propertySymbol) {
+	public PropertyGenInfo(IPropertySymbol propertySymbol) :
+		base(propertySymbol, propertySymbol.Type) {
 		Symbol = propertySymbol;
-		Type = Symbol.Type.IsDefinition ? Symbol.Type : Symbol.Type.OriginalDefinition;
 	}
 }

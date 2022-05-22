@@ -1,10 +1,13 @@
-﻿namespace PerfXml.Generator;
+﻿namespace PerfXml.Generator.Internal;
 
-internal static class Extensions {
+internal static class SymbolsExtensions {
 	#region Types
 
 	public static bool IsPrimitive(this ITypeSymbol type) {
-		return type.IsValueType || type.Name is "String";
+		return type.IsValueType
+		 || type.IsValueNullable()
+		 || type.IsEnum()
+		 || type.Name is "String";
 	}
 
 	public static bool IsString(this ITypeSymbol type) {
@@ -13,6 +16,20 @@ internal static class Extensions {
 
 	public static bool IsList(this ITypeSymbol type) {
 		return type.Name is "List";
+	}
+
+	public static bool IsValueNullable(this ITypeSymbol type) {
+		return type is INamedTypeSymbol { Name: "Nullable", IsValueType: true };
+	}
+
+	public static bool IsEnum(this ITypeSymbol type) {
+		return type.IsValueType && type.TypeKind is TypeKind.Enum;
+	}
+
+	public static ITypeSymbol? IfValueNullableGetInnerType(this ITypeSymbol type) {
+		return type.IsValueNullable() && type is INamedTypeSymbol nt
+			? nt.TypeArguments[0]
+			: null;
 	}
 
 	public static string? AsString(this TypedConstant tc) {
@@ -66,9 +83,8 @@ internal static class Extensions {
 		new(SymbolEqualityComparer.Default);
 
 	public static IEnumerable<INamedTypeSymbol> GetAllAncestors(this ITypeSymbol type) {
-		if (AncestorsCache.TryGetValue(type, out var ancestors)) {
+		if (AncestorsCache.TryGetValue(type, out var ancestors))
 			return ancestors;
-		}
 
 		AncestorsCache[type] = ancestors = type.GetAllAncestorsEnumerable().ToArray();
 

@@ -1,15 +1,17 @@
 namespace PerfXml.Generator;
 
 internal sealed class NestedScope : IDisposable {
-	private NestedScope(IndentedTextWriter writer) => this.writer = writer;
+	private NestedScope(IndentedTextWriter writer) {
+		this.writer = writer;
+	}
+
 	private readonly IndentedTextWriter writer;
 	private static readonly Stack<NestedScope> Stack = new();
 	private bool shouldCloseOnDispose = true;
 
 	public void Dispose() {
-		if (shouldCloseOnDispose) {
+		if (shouldCloseOnDispose)
 			Close();
-		}
 
 		Stack.Pop();
 	}
@@ -25,13 +27,9 @@ internal sealed class NestedScope : IDisposable {
 		scope.Close();
 	}
 
-	public static NestedScope Start(IndentedTextWriter writer, string? scopeName = null) {
+	public static NestedScope Start(IndentedTextWriter writer) {
 		var scope = new NestedScope(writer);
 		Stack.Push(scope);
-		if (scopeName is not null) {
-			writer.WriteLine(scopeName);
-		}
-
 		writer.WriteLine('{');
 		writer.Indent++;
 		return scope;
@@ -85,12 +83,12 @@ internal sealed class NestedClassScope : IDisposable {
 	private static string GetClsString(INamedTypeSymbol type) {
 		// {public/private...} {ref} partial {class/struct} {name}
 		const string f = "{0} {1}partial {2} {3}";
-		var symbolStr = type.ToString()!;
+		var fullName = type.ToString()!;
 		var str = string.Format(f,
 			type.DeclaredAccessibility.ToString().ToLowerInvariant(),
 			type.IsRefLikeType ? "ref " : string.Empty,
 			TypeKindToStr(type),
-			symbolStr[(symbolStr.LastIndexOf('.') + 1)..]
+			fullName[(fullName.LastIndexOf('.') + 1)..]
 		);
 		return str;
 	}

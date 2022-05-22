@@ -1,3 +1,4 @@
+/*
 using System.ComponentModel;
 
 namespace PerfXml.Str;
@@ -77,3 +78,6 @@ public readonly ref struct SpanStr {
 		throw new NotSupportedException();
 	}
 }
+*/
+
+

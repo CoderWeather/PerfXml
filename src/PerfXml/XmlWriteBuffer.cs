@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace PerfXml;
@@ -84,7 +83,7 @@ public ref struct XmlWriteBuffer {
 		CloseNodeHeadForBodyIfOpen();
 
 		PutChar('<');
-		PutString(name);
+		Write(name);
 		pendingNodeHeadClose = true;
 		return new(name);
 	}
@@ -93,14 +92,37 @@ public ref struct XmlWriteBuffer {
 	/// <param name="record">Record describing the open node</param>
 	public void EndNode(ref NodeRecord record) {
 		if (pendingNodeHeadClose is false) {
-			PutString("</");
-			PutString(record.Name);
+			Write("</");
+			Write(record.Name);
 			PutChar('>');
 		}
 		else {
-			PutString("/>");
+			Write("/>");
 			pendingNodeHeadClose = false;
 		}
+	}
+
+	public void WriteAttribute<T>(ReadOnlySpan<char> name, T value, IXmlFormatterResolver resolver) {
+		StartAttrCommon(name);
+		Write(value, resolver);
+		EndAttrCommon();
+	}
+
+	public void WriteNodeValue<T>(ReadOnlySpan<char> name, T value, IXmlFormatterResolver resolver) {
+		var node = StartNodeHead(name);
+		Write(value, resolver, true);
+		EndNode(ref node);
+	}
+
+	public void Write<T>(T value, IXmlFormatterResolver resolver, bool closePrevNode = false) {
+		if (closePrevNode) {
+			CloseNodeHeadForBodyIfOpen();
+		}
+		int charsWritten;
+		while (resolver.TryWriteTo(WriteSpan, value, out charsWritten) is false)
+			Resize();
+
+		currentOffset += charsWritten;
 	}
 
 	/// <summary>Escape and put text into the buffer</summary>
@@ -111,68 +133,13 @@ public ref struct XmlWriteBuffer {
 			EncodeText(text);
 		}
 		else {
-			PutString(XmlReadBuffer.CDataStart);
+			Write(XmlReadBuffer.CDataStart);
 			if (CdataMode == CDataMode.OnEncode)
 				EncodeText(text);
 			else
-				PutString(text); // CDataMode.On
-			PutString(XmlReadBuffer.CDataEnd);
+				Write(text); // CDataMode.On
+			Write(XmlReadBuffer.CDataEnd);
 		}
-	}
-
-	public void PutAttribute(ReadOnlySpan<char> name, ReadOnlySpan<char> value) {
-		StartAttrCommon(name);
-		EncodeText(value, true);
-		EndAttrCommon();
-	}
-
-	public void PutAttributeValue<T>(ReadOnlySpan<char> name, T value)
-		where T : struct {
-		StartAttrCommon(name);
-		PutValue(value);
-		EndAttrCommon();
-	}
-
-	public void PutAttributeInt(ReadOnlySpan<char> name, int value) {
-		StartAttrCommon(name);
-		PutInt(value);
-		EndAttrCommon();
-	}
-
-	public void PutAttributeUInt(ReadOnlySpan<char> name, uint value) {
-		StartAttrCommon(name);
-		PutUInt(value);
-		EndAttrCommon();
-	}
-
-	public void PutAttributeLong(ReadOnlySpan<char> name, long value) {
-		StartAttrCommon(name);
-		PutLong(value);
-		EndAttrCommon();
-	}
-
-	public void PutAttributeDouble(ReadOnlySpan<char> name, double value) {
-		StartAttrCommon(name);
-		PutDouble(value);
-		EndAttrCommon();
-	}
-
-	public void PutAttributeBoolean(ReadOnlySpan<char> name, bool value) {
-		StartAttrCommon(name);
-		PutChar(value ? '1' : '0');
-		EndAttrCommon();
-	}
-
-	public void PutAttributeByte(ReadOnlySpan<char> name, byte value) {
-		StartAttrCommon(name);
-		PutUInt(value); // todo: hmm
-		EndAttrCommon();
-	}
-
-	public void PutAttributeGuid(ReadOnlySpan<char> name, Guid value) {
-		StartAttrCommon(name);
-		PutString(value.ToString());
-		EndAttrCommon();
 	}
 
 	/// <summary>Write the starting characters for an attribute (" name=''")</summary>
@@ -180,8 +147,8 @@ public ref struct XmlWriteBuffer {
 	private void StartAttrCommon(ReadOnlySpan<char> name) {
 		Debug.Assert(pendingNodeHeadClose);
 		PutChar(' ');
-		PutString(name);
-		PutString("='");
+		Write(name);
+		Write("='");
 	}
 
 	/// <summary>End an attribute</summary>
@@ -190,108 +157,15 @@ public ref struct XmlWriteBuffer {
 		PutChar('\'');
 	}
 
-	public void PutValue<T>(T value)
-		where T : struct {
-		CloseNodeHeadForBodyIfOpen();
-		switch (value) {
-			case int i:
-				PutInt(i);
-				break;
-			case uint i:
-				PutUInt(i);
-				break;
-			case long l:
-				PutLong(l);
-				break;
-			case double d:
-				PutDouble(d);
-				break;
-			case decimal d:
-				PutDecimal(d);
-				break;
-			case char c:
-				PutChar(c);
-				break;
-			case Guid g:
-				PutGuid(g);
-				break;
-			case bool b:
-				PutChar(b ? '1' : '0');
-				break;
-			default:
-				PutString(value.ToString());
-				break;
-		}
-	}
-
-	/// <summary>Format a <see cref="Int32"/> into the buffer as text</summary>
-	/// <param name="value">The value to write</param>
-	public void PutInt(int value) {
-		int charsWritten;
-		while (value.TryFormat(WriteSpan, out charsWritten, default, CultureInfo.InvariantCulture) is false) {
-			Resize();
-		}
-
-		currentOffset += charsWritten;
-	}
-
-	public void PutLong(long value) {
-		int charsWritten;
-		while (value.TryFormat(WriteSpan, out charsWritten, default, CultureInfo.InvariantCulture) is false) {
-			Resize();
-		}
-
-		currentOffset += charsWritten;
-	}
-
-	/// <summary>Format a <see cref="UInt32"/> into the buffer as text</summary>
-	/// <param name="value">The value to write</param>
-	public void PutUInt(uint value) {
-		int charsWritten;
-		while (value.TryFormat(WriteSpan, out charsWritten, default, CultureInfo.InvariantCulture) is false) {
-			Resize();
-		}
-
-		currentOffset += charsWritten;
-	}
-
-	/// <summary>Format a <see cref="Double"/> into the buffer as text</summary>
-	/// <param name="value">The value to write</param>
-	public void PutDouble(double value) {
-		int charsWritten;
-		while (value.TryFormat(WriteSpan, out charsWritten, default, CultureInfo.InvariantCulture) is false) {
-			Resize();
-		}
-
-		currentOffset += charsWritten;
-	}
-
-	public void PutDecimal(decimal value) {
-		int charsWritten;
-		while (value.TryFormat(WriteSpan, out charsWritten) is false) {
-			Resize();
-		}
-
-		currentOffset += charsWritten;
-	}
-
-	public void PutGuid(Guid value) {
-		int charsWritten;
-		while (value.TryFormat(WriteSpan, out charsWritten) is false) {
-			Resize();
-		}
-
-		currentOffset += charsWritten;
-	}
-
-	/// <summary>Put a raw <see cref="ReadOnlySpan{T}"/> into the buffer</summary>
+	/// <summary>Write a raw <see cref="ReadOnlySpan{T}"/> into the buffer</summary>
 	/// <param name="chars">The span of text to write</param>
-	public void PutString(ReadOnlySpan<char> chars) {
+	public void Write(ReadOnlySpan<char> chars) {
 		if (chars.Length == 0)
 			return;
 
 		while (chars.TryCopyTo(WriteSpan) is false)
 			Resize();
+
 		currentOffset += chars.Length;
 	}
 
@@ -316,10 +190,9 @@ public ref struct XmlWriteBuffer {
 
 	/// <summary>Release internal buffer</summary>
 	public void Dispose() {
-		if (buffer is not null) {
-			var b = buffer;
+		var b = buffer;
+		if (b is not null)
 			ArrayPool<char>.Shared.Return(b);
-		}
 	}
 
 	/// <summary>
@@ -327,16 +200,19 @@ public ref struct XmlWriteBuffer {
 	/// </summary>
 	/// <param name="obj">The object to serialize</param>
 	/// <param name="cdataMode">Should text be written as CDATA</param>
+	/// <param name="resolver"></param>
 	/// <returns>Serialized XML</returns>
-	public static ReadOnlySpan<char> SerializeStatic<T>(T obj, CDataMode cdataMode = CDataMode.Off)
-		where T : IXmlSerialization {
+	internal static ReadOnlySpan<char> SerializeStatic<T>(T obj,
+		CDataMode cdataMode = CDataMode.Off,
+		IXmlFormatterResolver? resolver = null
+	) where T : IXmlSerialization {
+		resolver ??= Xml.DefaultResolver;
 		if (obj == null)
 			throw new ArgumentNullException(nameof(obj));
-		var writer = new XmlWriteBuffer {
-			CdataMode = cdataMode
-		};
+		var writer = Create();
+		writer.CdataMode = cdataMode;
 		try {
-			obj.Serialize(ref writer);
+			obj.Serialize(ref writer, resolver);
 			var span = writer.ToSpan();
 			Span<char> result = new char[span.Length];
 			span.CopyTo(result);
@@ -347,21 +223,23 @@ public ref struct XmlWriteBuffer {
 		}
 	}
 
-	public static void SerializeStatic<T>(T obj,
+	internal static void SerializeStatic<T>(T obj,
 		Span<char> span,
-		out int writtenChars,
+		out int charsWritten,
+		IXmlFormatterResolver? resolver = null,
 		CDataMode cdataMode = CDataMode.Off)
 		where T : IXmlSerialization {
+		resolver ??= Xml.DefaultResolver;
 		if (obj == null)
 			throw new ArgumentNullException(nameof(obj));
 		var writer = new XmlWriteBuffer {
 			CdataMode = cdataMode
 		};
 		try {
-			obj.Serialize(ref writer);
+			obj.Serialize(ref writer, resolver);
 			var resultSpan = writer.ToSpan();
 			resultSpan.CopyTo(span);
-			writtenChars = resultSpan.Length;
+			charsWritten = resultSpan.Length;
 		}
 		finally {
 			writer.Dispose();
@@ -387,14 +265,14 @@ public ref struct XmlWriteBuffer {
 		while (true) {
 			var escapeCharIdx = currentInput.IndexOfAny(escapeChars);
 			if (escapeCharIdx == -1) {
-				PutString(currentInput);
+				Write(currentInput);
 				return;
 			}
 
-			PutString(currentInput[..escapeCharIdx]);
+			Write(currentInput[..escapeCharIdx]);
 
 			var charToEncode = currentInput[escapeCharIdx];
-			PutString(charToEncode switch {
+			Write(charToEncode switch {
 				'<'  => "&lt;",
 				'>'  => "&gt;",
 				'&'  => "&amp;",

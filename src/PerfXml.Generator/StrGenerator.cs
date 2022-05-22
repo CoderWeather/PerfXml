@@ -264,7 +264,7 @@ internal sealed class StrGenerator : ISourceGenerator {
 			"Int32"   => $"writer.PutInt({toWrite})",
 			"Double"  => $"writer.PutDouble({toWrite})",
 			"String"  => $"writer.PutString({toWrite})",
-			"SpanStr" => $"writer.PutString({toWrite})",
+			"ReadOnlySpan<char>" => $"writer.PutString({toWrite})",
 			_         => throw new($"GetWriterForType: {type}")
 		};
 		return result;
@@ -275,7 +275,7 @@ internal sealed class StrGenerator : ISourceGenerator {
 			"Int32"   => "reader.GetInt()",
 			"Double"  => "reader.GetDouble()",
 			"String"  => "reader.GetString().ToString()",
-			"SpanStr" => "reader.GetSpanString()",
+			"ReadOnlySpan<char>" => "reader.GetReadOnlySpan<char>ing()",
 			_         => throw new($"GetReaderForType: {type}")
 		};
 		return result;
@@ -291,3 +291,5 @@ internal sealed class StrGenerator : ISourceGenerator {
 	}
 }
 */
+
+
