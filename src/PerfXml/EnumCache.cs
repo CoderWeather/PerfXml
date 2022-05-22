@@ -13,7 +13,7 @@ public static class EnumCache {
 
 	private static class Cache<T>
 		where T : struct, Enum {
-		private static readonly Dictionary<string, T> ByNames = new();
+		private static readonly Dictionary<string, T> ByNames = new(StringComparer.InvariantCultureIgnoreCase);
 		private static readonly Dictionary<T, string> ByValues = new();
 
 		public static T ByName(string s) {
