@@ -1,18 +1,8 @@
-﻿using System.Globalization;
-using PerfXml.Resolvers;
+﻿using PerfXml.Resolvers;
 
 namespace PerfXml;
 
 public static class Xml {
-	static Xml() {
-		DateTimeFormat = DateTimeFormatInfo.InvariantInfo;
-		DateTimeFormat.ShortTimePattern = "HH:mm";
-		DateTimeFormat.ShortDatePattern = "yyyy-MM-dd";
-		DateTimeFormat.FullDateTimePattern = "yyyy-MM-dd HH:mm:ss";
-	}
-
-	internal static readonly DateTimeFormatInfo DateTimeFormat;
-
 	private static IXmlFormatterResolver defaultResolver = StandardResolver.Instance;
 
 	public static IXmlFormatterResolver DefaultResolver {
