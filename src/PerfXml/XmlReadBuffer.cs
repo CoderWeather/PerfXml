@@ -17,7 +17,7 @@ public ref struct XmlReadBuffer {
 	// private bool abort;
 
 	/// <summary>Type of text blocks to deserialize</summary>
-	private CDataMode cDataMode;
+	// private CDataMode cdataMode;
 
 	/// <summary>Current depth of calls to <see cref="ReadInto{T}"/></summary>
 	private int depth;
@@ -302,15 +302,15 @@ public ref struct XmlReadBuffer {
 		return WebUtility.HtmlDecode(input.ToString()); // todo: allocates input as string, gross
 	}
 
-	/// <summary>
-	/// Deserialize XML element inner text. Switches between CDATA and raw text on <see cref="cDataMode"/>
+	/*/// <summary>
+	/// Deserialize XML element inner text. Switches between CDATA and raw text on <see cref="cdataMode"/>
 	/// </summary>
 	/// <param name="span">Span at the beginning of the element's inner text</param>
 	/// <param name="endEndIdx">The index of the end of the text within <see cref="span"/></param>
 	/// <returns>Deserialized inner text data</returns>
 	/// <exception cref="InvalidDataException">The bounds of the text could not be determined</exception>
 	public ReadOnlySpan<char> DeserializeString(ReadOnlySpan<char> span, out int endEndIdx) {
-		if (cDataMode == CDataMode.Off)
+		if (cdataMode == CDataMode.Off)
 			return DeserializeElementRawInnerText(span, out endEndIdx);
 		// todo: CDATA cannot contain the string "]]>" anywhere in the XML document.
 
@@ -324,10 +324,10 @@ public ref struct XmlReadBuffer {
 		endEndIdx = CDataEnd.Length + endIdx;
 
 		var stringData = span.Slice(CDataStart.Length, endIdx - CDataStart.Length);
-		return cDataMode == CDataMode.OnEncode
+		return cdataMode == CDataMode.OnEncode
 			? DecodeText(stringData)
 			: stringData;
-	}
+	}*/
 
 	public ReadOnlySpan<char> ReadNodeValue(ReadOnlySpan<char> span, out int endEndIdx) {
 		endEndIdx = span.IndexOf('<'); // find start of next node
