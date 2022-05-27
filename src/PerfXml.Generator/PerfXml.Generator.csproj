@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
+        <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>latest</LangVersion>
         <IsRoslynComponent>true</IsRoslynComponent>
         <Nullable>enable</Nullable>
@@ -13,7 +13,7 @@
 
     <PropertyGroup>
         <PackageId>PerfXml.Generator</PackageId>
-        <Version>1.0.7</Version>
+        <Version>1.0.8</Version>
         <Authors>Ilya Pogodin</Authors>
         <Description>Fast and low memory consumption C# XML serialization\deserialization engine with source generators.</Description>
         <RepositoryUrl>https://github.com/CoderWeather/PerfXml</RepositoryUrl>

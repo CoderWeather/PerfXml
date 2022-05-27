@@ -16,7 +16,7 @@ public ref struct XmlReadBuffer {
 	// /// <summary>Abort parsing immediately</summary>
 	// private bool abort;
 
-	/// <summary>Type of text blocks to deserialize</summary>
+	// /// <summary>Type of text blocks to deserialize</summary>
 	// private CDataMode cdataMode;
 
 	/// <summary>Current depth of calls to <see cref="ReadInto{T}"/></summary>

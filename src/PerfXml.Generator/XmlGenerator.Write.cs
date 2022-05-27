@@ -96,7 +96,7 @@ internal partial class XmlGenerator {
 					 ?? classToParse?.ClassName
 					 ?? throw new InvalidDataException("no body name??");
 
-					writer.WriteLine($"case {HashName(nameToCheck)}:");
+					writer.WriteLine($"case {HashName(new(nameToCheck.ToCharArray()))}:");
 					using (NestedScope.Start(writer)) {
 						if (classToParse is not null) {
 							if (isList) {
@@ -199,7 +199,7 @@ internal partial class XmlGenerator {
 			writer.WriteLine("switch (hash)");
 			using (NestedScope.Start(writer)) {
 				foreach (var attr in xmlAttrs) {
-					writer.WriteLine($"case {HashName(attr.XmlName!)}:");
+					writer.WriteLine($"case {HashName(attr.XmlName!.ToCharArray())}:");
 					using (NestedScope.Start(writer)) {
 						if (attr.SplitChar is not null) {
 							var namedType = (INamedTypeSymbol)attr.OriginalType;

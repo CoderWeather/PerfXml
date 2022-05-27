@@ -88,7 +88,7 @@ internal sealed class NestedClassScope : IDisposable {
 			type.DeclaredAccessibility.ToString().ToLowerInvariant(),
 			type.IsRefLikeType ? "ref " : string.Empty,
 			TypeKindToStr(type),
-			fullName[(fullName.LastIndexOf('.') + 1)..]
+			fullName.Substring((fullName.LastIndexOf('.') + 1))
 		);
 		return str;
 	}

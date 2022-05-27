@@ -4,11 +4,6 @@ namespace PerfXml.Generator;
 
 [Generator]
 internal sealed partial class XmlGenerator : ISourceGenerator {
-	private INamedTypeSymbol? bodyAttributeSymbol;
-	private INamedTypeSymbol? fieldAttributeSymbol;
-	private INamedTypeSymbol? classAttributeSymbol;
-	private INamedTypeSymbol? splitStringAttributeSymbol;
-
 	private readonly Dictionary<ITypeSymbol, ClassGenInfo> classes = new(SymbolEqualityComparer.Default);
 
 	public void Initialize(GeneratorInitializationContext context) {
@@ -42,10 +37,10 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 
 		var compilation = context.Compilation;
 
-		bodyAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlBodyAttribute");
-		fieldAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlFieldAttribute");
-		classAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlClsAttribute");
-		splitStringAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlSplitStrAttribute");
+		var bodyAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlBodyAttribute");
+		var fieldAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlFieldAttribute");
+		var classAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlClsAttribute");
+		var splitStringAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlSplitStrAttribute");
 
 		foreach (var cl in receiver.Classes) {
 			var model = compilation.GetSemanticModel(cl.SyntaxTree);
@@ -169,14 +164,16 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 				propInfo.SplitChar = ch;
 		}
 
-		foreach (var (_, v) in classes
+		foreach (var pair in classes
 					.Where(x => x.Value.AlreadyHasEmptyConstructor)
 					.ToArray()) {
+			var v = pair.Value;
 			v.XmlAttributes.RemoveAll(x => x.OriginalType.IsList());
 			v.XmlBodies.RemoveAll(x => x.OriginalType.IsList());
 		}
 
-		foreach (var (_, v) in classes) {
+		foreach (var pair in classes) {
+			var v = pair.Value;
 			if (v.Symbol.HasBaseClass() && classes.ContainsKey(v.Symbol.BaseType!.OriginalDefinition))
 				v.InheritedFromSerializable = true;
 
