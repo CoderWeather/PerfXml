@@ -52,18 +52,22 @@ public ref struct XmlReadBuffer {
 			}
 
 			var eqIdx = spaceSpan.IndexOf('=');
-			if (eqIdx == -1)
+			if (eqIdx == -1) {
 				break;
+			}
+
 			var attributeName = spaceSpan[..eqIdx];
 
 			var quoteType = spaceSpan[eqIdx + 1];
-			if (quoteType != '\'' && quoteType != '\"')
+			if (quoteType != '\'' && quoteType != '\"') {
 				throw new InvalidDataException($"invalid quote char {quoteType}");
+			}
 
 			var attributeValueSpan = spaceSpan[(eqIdx + 2)..];
 			var quoteEndIdx = attributeValueSpan.IndexOf(quoteType);
-			if (quoteEndIdx == -1)
+			if (quoteEndIdx == -1) {
 				throw new InvalidDataException("unable to find pair end quote");
+			}
 
 			var attributeValue = attributeValueSpan[..quoteEndIdx];
 			var attributeValueDecoded = DecodeText(attributeValue);
@@ -72,11 +76,12 @@ public ref struct XmlReadBuffer {
 			var assigned = obj.ParseAttribute(ref this, nameHash, attributeValueDecoded, resolver);
 			// if (abort)
 			// 	return -1;
-			if (!assigned)
+			if (!assigned) {
 				Debug.Print("[XmlReadBuffer]: unhandled attribute {0} on {1}. \"{2}\"",
 					attributeName.ToString(),
 					obj.GetType(),
 					attributeValue.ToString());
+			}
 
 			position += attributeName.Length + attributeValue.Length + 2 + 1; // ='' -- 3 chars
 		}
@@ -95,8 +100,9 @@ public ref struct XmlReadBuffer {
 		where T : IXmlSerialization {
 		resolver ??= Xml.DefaultResolver;
 		depth++;
-		if (depth >= MaxDepth)
+		if (depth >= MaxDepth) {
 			throw new($"maximum depth {MaxDepth} reached");
+		}
 
 		var primary = true;
 		for (var i = 0; i < span.Length;) {
@@ -104,8 +110,10 @@ public ref struct XmlReadBuffer {
 
 			if (currSpan[0] != '<') {
 				var idxOfAngleBracket = currSpan.IndexOf('<');
-				if (idxOfAngleBracket == -1)
+				if (idxOfAngleBracket == -1) {
 					break;
+				}
+
 				i += idxOfAngleBracket;
 				continue;
 			}
@@ -122,8 +130,9 @@ public ref struct XmlReadBuffer {
 						// e.g <?xml version='1.0'?>
 
 						var declarationEnd = currSpan.IndexOf(DeclarationEnd);
-						if (declarationEnd == -1)
+						if (declarationEnd == -1) {
 							throw new InvalidDataException("where is declaration end");
+						}
 
 						i += declarationEnd + DeclarationEnd.Length;
 						continue;
@@ -132,26 +141,33 @@ public ref struct XmlReadBuffer {
 
 				if (currSpan.StartsWith(CommentStart)) {
 					var commentEnd = currSpan.IndexOf(CommentEnd);
-					if (commentEnd == -1)
+					if (commentEnd == -1) {
 						throw new InvalidDataException("where is comment end");
+					}
 
 					i += commentEnd + CommentEnd.Length;
 					continue;
 				}
 
-				if (currSpan[1] == '!')
+				if (currSpan[1] == '!') {
 					throw new("xml data type definitions are not supported");
+				}
 			}
 
 			var closeBraceIdx = currSpan.IndexOf('>');
 			var spaceIdx = currSpan.IndexOf(' ');
-			if (spaceIdx > closeBraceIdx)
+			if (spaceIdx > closeBraceIdx) {
 				spaceIdx = -1; // we are looking for a space in the node declaration
+			}
+
 			var nameEndIdx = Math.Min(closeBraceIdx, spaceIdx);
-			if (nameEndIdx == -1)
+			if (nameEndIdx == -1) {
 				nameEndIdx = closeBraceIdx; // todo min of 1 and -1 is -1
-			if (nameEndIdx == -1)
+			}
+
+			if (nameEndIdx == -1) {
 				throw new InvalidDataException("unable to find end of node name");
+			}
 
 			var noBody = false;
 			if (currSpan[nameEndIdx - 1] == '/') {
@@ -191,9 +207,10 @@ public ref struct XmlReadBuffer {
 
 				primary = false;
 
-				if (afterAttrsChar != '>')
+				if (afterAttrsChar != '>') {
 					throw new InvalidDataException(
 						"char after attributes should have been the end of the node, but it isn't");
+				}
 
 				var bodySpan = currSpan[(closeBraceIdx + 1)..];
 
@@ -206,8 +223,9 @@ public ref struct XmlReadBuffer {
 				// }
 
 				if (handled) {
-					if (endIdx == unassignedIdx)
+					if (endIdx == unassignedIdx) {
 						throw new("endIdx should be set if returning true from ParseFullBody");
+					}
 
 					var fullSpanIdx = afterAttrs + 1 + endIdx;
 
@@ -215,8 +233,9 @@ public ref struct XmlReadBuffer {
 					if (currSpan[fullSpanIdx] != '<'
 					 || currSpan[fullSpanIdx + 1] != '/'
 					 || !currSpan.Slice(fullSpanIdx + 2, nodeName.Length).SequenceEqual(nodeName)
-					 || currSpan[fullSpanIdx + 2 + nodeName.Length] != '>')
+					 || currSpan[fullSpanIdx + 2 + nodeName.Length] != '>') {
 						throw new InvalidDataException("Unexpected data after handling full body");
+					}
 
 					i += fullSpanIdx + 2 + nodeName.Length;
 					continue;
@@ -239,7 +258,7 @@ public ref struct XmlReadBuffer {
 					ref endIdx,
 					ref endInnerIdx,
 					resolver);
-				if (parsedSub is false)
+				if (parsedSub is false) {
 					parsedSub = obj.ParseSubBody(ref this,
 						nodeName,
 						currSpan,
@@ -247,6 +266,7 @@ public ref struct XmlReadBuffer {
 						ref endIdx,
 						ref endInnerIdx,
 						resolver);
+				}
 
 				if (parsedSub is false) {
 					// Full node skip if not found member to read
@@ -295,8 +315,9 @@ public ref struct XmlReadBuffer {
 
 	private static ReadOnlySpan<char> DeserializeElementRawInnerText(ReadOnlySpan<char> span, out int endEndIdx) {
 		endEndIdx = span.IndexOf('<'); // find start of next node
-		if (endEndIdx == -1)
+		if (endEndIdx == -1) {
 			throw new InvalidDataException("unable to find end of text");
+		}
 
 		var textSlice = span[..endEndIdx];
 		return DecodeText(textSlice);
@@ -309,7 +330,10 @@ public ref struct XmlReadBuffer {
 		var andIndex = input.IndexOf('&');
 		if (andIndex == -1)
 			// no need to decode :)
+		{
 			return input;
+		}
+
 		return WebUtility.HtmlDecode(input.ToString()); // todo: allocates input as string, gross
 	}
 
@@ -342,8 +366,9 @@ public ref struct XmlReadBuffer {
 
 	public ReadOnlySpan<char> ReadNodeValue(ReadOnlySpan<char> span, out int endEndIdx) {
 		endEndIdx = span.IndexOf('<'); // find start of next node
-		if (endEndIdx is -1)
+		if (endEndIdx is -1) {
 			throw new InvalidDataException("unable to find end of node value");
+		}
 
 		var slice = span[..endEndIdx];
 		return slice;
@@ -372,7 +397,6 @@ public ref struct XmlReadBuffer {
 	/// <typeparam name="T">Type to parse</typeparam>
 	/// <returns>The created instance</returns>
 	public T Read<T>(ReadOnlySpan<char> span, IXmlFormatterResolver? resolver = null)
-		where T : IXmlSerialization, new() {
-		return Read<T>(span, out _);
-	}
+		where T : IXmlSerialization, new() =>
+		Read<T>(span, out _);
 }

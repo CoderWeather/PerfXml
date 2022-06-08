@@ -70,8 +70,10 @@ public ref struct XmlWriteBuffer {
 	/// Puts a "&gt;" character to signify the end of the current node head ("&lt;name&gt;") if it hasn't been already done
 	/// </summary>
 	private void CloseNodeHeadForBodyIfOpen() {
-		if (pendingNodeHeadClose is false)
+		if (pendingNodeHeadClose is false) {
 			return;
+		}
+
 		PutChar('>');
 		pendingNodeHeadClose = false;
 	}
@@ -118,6 +120,7 @@ public ref struct XmlWriteBuffer {
 		if (closePrevNode) {
 			CloseNodeHeadForBodyIfOpen();
 		}
+
 		int charsWritten;
 		while (resolver.TryWriteTo(WriteSpan, value, out charsWritten) is false)
 			Resize();
@@ -134,10 +137,13 @@ public ref struct XmlWriteBuffer {
 		}
 		else {
 			Write(XmlReadBuffer.CDataStart);
-			if (CdataMode == CDataMode.OnEncode)
+			if (CdataMode == CDataMode.OnEncode) {
 				EncodeText(text);
-			else
+			}
+			else {
 				Write(text); // CDataMode.On
+			}
+
 			Write(XmlReadBuffer.CDataEnd);
 		}
 	}
@@ -160,8 +166,9 @@ public ref struct XmlWriteBuffer {
 	/// <summary>Write a raw <see cref="ReadOnlySpan{T}"/> into the buffer</summary>
 	/// <param name="chars">The span of text to write</param>
 	public void Write(ReadOnlySpan<char> chars) {
-		if (chars.Length == 0)
+		if (chars.Length == 0) {
 			return;
+		}
 
 		while (chars.TryCopyTo(WriteSpan) is false)
 			Resize();
@@ -172,8 +179,9 @@ public ref struct XmlWriteBuffer {
 	/// <summary>Put a raw <see cref="Char"/> into the buffer</summary>
 	/// <param name="c">The character to write</param>
 	public void PutChar(char c) {
-		if (WriteSpan.Length == 0)
+		if (WriteSpan.Length == 0) {
 			Resize();
+		}
 
 		WriteSpan[0] = c;
 		currentOffset++;
@@ -191,8 +199,9 @@ public ref struct XmlWriteBuffer {
 	/// <summary>Release internal buffer</summary>
 	public void Dispose() {
 		var b = buffer;
-		if (b is not null)
+		if (b is not null) {
 			ArrayPool<char>.Shared.Return(b);
+		}
 	}
 
 	/// <summary>
@@ -207,8 +216,10 @@ public ref struct XmlWriteBuffer {
 		IXmlFormatterResolver? resolver = null
 	) where T : IXmlSerialization {
 		resolver ??= Xml.DefaultResolver;
-		if (obj == null)
+		if (obj == null) {
 			throw new ArgumentNullException(nameof(obj));
+		}
+
 		var writer = Create();
 		writer.CdataMode = cdataMode;
 		try {
@@ -230,8 +241,10 @@ public ref struct XmlWriteBuffer {
 		CDataMode cdataMode = CDataMode.Off)
 		where T : IXmlSerialization {
 		resolver ??= Xml.DefaultResolver;
-		if (obj == null)
+		if (obj == null) {
 			throw new ArgumentNullException(nameof(obj));
+		}
+
 		var writer = new XmlWriteBuffer {
 			CdataMode = cdataMode
 		};

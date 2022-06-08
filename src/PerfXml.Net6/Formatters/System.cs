@@ -9,13 +9,11 @@ public sealed class DateOnlyFormatter : IXmlFormatter<DateOnly> {
 
 	public static readonly DateOnlyFormatter Instance = new();
 
-	public bool TryWriteTo(Span<char> span, DateOnly value, out int charsWritten, IXmlFormatterResolver resolver) {
-		return value.TryFormat(span, out charsWritten, format);
-	}
+	public bool TryWriteTo(Span<char> span, DateOnly value, out int charsWritten, IXmlFormatterResolver resolver) =>
+		value.TryFormat(span, out charsWritten, format);
 
-	public DateOnly Parse(ReadOnlySpan<char> span, IXmlFormatterResolver formatterResolver) {
-		return DateOnly.ParseExact(span, format);
-	}
+	public DateOnly Parse(ReadOnlySpan<char> span, IXmlFormatterResolver formatterResolver) =>
+		DateOnly.ParseExact(span, format);
 }
 
 public sealed class TimeOnlyFormatter : IXmlFormatter<TimeOnly> {
@@ -27,11 +25,9 @@ public sealed class TimeOnlyFormatter : IXmlFormatter<TimeOnly> {
 
 	public static readonly TimeOnlyFormatter Instance = new();
 
-	public bool TryWriteTo(Span<char> span, TimeOnly value, out int charsWritten, IXmlFormatterResolver resolver) {
-		return value.TryFormat(span, out charsWritten, format);
-	}
+	public bool TryWriteTo(Span<char> span, TimeOnly value, out int charsWritten, IXmlFormatterResolver resolver) =>
+		value.TryFormat(span, out charsWritten, format);
 
-	public TimeOnly Parse(ReadOnlySpan<char> span, IXmlFormatterResolver formatterResolver) {
-		return TimeOnly.ParseExact(span, format);
-	}
+	public TimeOnly Parse(ReadOnlySpan<char> span, IXmlFormatterResolver formatterResolver) =>
+		TimeOnly.ParseExact(span, format);
 }

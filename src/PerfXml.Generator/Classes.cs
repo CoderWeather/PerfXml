@@ -2,37 +2,12 @@
 
 namespace PerfXml.Generator;
 
-internal class SyntaxReceiver : ISyntaxReceiver {
-	public List<TypeDeclarationSyntax> Classes { get; } = new();
-	public List<FieldDeclarationSyntax> Fields { get; } = new();
-	public List<PropertyDeclarationSyntax> Properties { get; } = new();
-
-	public void OnVisitSyntaxNode(SyntaxNode syntaxNode) {
-		switch (syntaxNode) {
-			case ClassDeclarationSyntax { AttributeLists.Count: > 0 } classDeclarationSyntax:
-				Classes.Add(classDeclarationSyntax);
-				break;
-			case RecordDeclarationSyntax { AttributeLists.Count: > 0 } recordDeclarationSyntax:
-				Classes.Add(recordDeclarationSyntax);
-				break;
-			case FieldDeclarationSyntax { AttributeLists.Count: > 0 } fieldDeclarationSyntax:
-				Fields.Add(fieldDeclarationSyntax);
-				break;
-			case PropertyDeclarationSyntax { AttributeLists.Count: > 0 } propertyDeclarationSyntax:
-				Properties.Add(propertyDeclarationSyntax);
-				break;
-		}
-	}
-}
-
 internal sealed class ClassGenInfo {
 	public readonly INamedTypeSymbol Symbol;
 	public readonly List<BaseMemberGenInfo> XmlAttributes = new();
 	public readonly List<BaseMemberGenInfo> XmlBodies = new();
 	public bool InheritedClassName = false;
-	public bool AlreadyHasEmptyConstructor = false;
 	public bool InheritedFromSerializable = false;
-	public bool HaveGenericElements = false;
 
 	public string? ClassName;
 
@@ -52,8 +27,17 @@ internal abstract class BaseMemberGenInfo {
 	public ISymbol Symbol { get; }
 	public ITypeSymbol OriginalType { get; }
 	public ITypeSymbol Type { get; }
+
+	public string TypeName =>
+		Type switch {
+			INamedTypeSymbol nts => nts.IsGenericType ? nts.ToString() : nts.Name,
+			ITypeParameterSymbol => Type.Name,
+			_                    => Type.ToString()
+		};
+
 	public string? XmlName;
 	public char? SplitChar;
+	public bool TypeIsSerializable;
 
 	protected BaseMemberGenInfo(ISymbol symbol, ITypeSymbol type) {
 		Symbol = symbol;

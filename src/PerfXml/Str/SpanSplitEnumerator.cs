@@ -23,9 +23,7 @@ public ref struct SpanSplitEnumerator<T> where T : IEquatable<T> {
 	/// Returns an enumerator that allows for iteration over the split span.
 	/// </summary>
 	/// <returns>Returns a <see cref="SpanSplitEnumerator{T}"/> that can be used to iterate over the split span.</returns>
-	public SpanSplitEnumerator<T> GetEnumerator() {
-		return this;
-	}
+	public SpanSplitEnumerator<T> GetEnumerator() => this;
 
 	/// <summary>
 	/// Returns the current element of the enumeration.
@@ -62,8 +60,9 @@ public ref struct SpanSplitEnumerator<T> where T : IEquatable<T> {
 	/// </summary>
 	/// <returns><see langword="true"/> if the enumerator was successfully advanced to the next element; <see langword="false"/> if the enumerator has passed the end of the enumeration.</returns>
 	public bool MoveNext() {
-		if (!CanMoveNext())
+		if (!CanMoveNext()) {
 			return false;
+		}
 
 		var slice = _buffer[_startNext..];
 		_startCurrent = _startNext;
@@ -76,7 +75,5 @@ public ref struct SpanSplitEnumerator<T> where T : IEquatable<T> {
 		return true;
 	}
 
-	public bool CanMoveNext() {
-		return _isInitialized && _startNext <= _buffer.Length;
-	}
+	public bool CanMoveNext() => _isInitialized && _startNext <= _buffer.Length;
 }

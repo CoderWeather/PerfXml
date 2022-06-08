@@ -15,9 +15,8 @@ public static class Xml {
 	}
 
 	public static ReadOnlySpan<char> Serialize<T>(T obj)
-		where T : IXmlSerialization {
-		return XmlWriteBuffer.SerializeStatic(obj);
-	}
+		where T : IXmlSerialization =>
+		XmlWriteBuffer.SerializeStatic(obj);
 
 	public static void Serialize<T>(T obj,
 		Span<char> span,

@@ -2,9 +2,8 @@
 
 public static class NodeNamesCollector {
 	public static string GetFor<T>()
-		where T : IXmlSerialization, new() {
-		return Cache<T>.NodeName;
-	}
+		where T : IXmlSerialization, new() =>
+		Cache<T>.NodeName;
 
 	// public static void RegisterFor<T>(string nodeName)
 	// 	where T : IXmlSerialization, new() {
@@ -16,6 +15,8 @@ public static class NodeNamesCollector {
 		where T : IXmlSerialization, new() {
 		public static readonly string NodeName;
 
-		static Cache() => NodeName = new T().GetNodeName().ToString();
+		static Cache() {
+			NodeName = new T().GetNodeName().ToString();
+		}
 	}
 }

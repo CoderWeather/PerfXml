@@ -29,23 +29,28 @@ public ref struct StrWriter {
 	}
 
 	private void AssertWriteable() {
-		if (backing == null)
+		if (backing == null) {
 			throw new ObjectDisposedException("StrWriter");
+		}
 	}
 
 	private void PutSeparator() {
-		if (isFirst)
+		if (isFirst) {
 			isFirst = false;
-		else
+		}
+		else {
 			PutRaw(Separator);
+		}
 	}
 
 	public void Write<T>(T value, IXmlFormatterResolver resolver) {
 		PutSeparator();
-		if (resolver.TryWriteTo(Buffer, value, out var charsWritten))
+		if (resolver.TryWriteTo(Buffer, value, out var charsWritten)) {
 			currIdx += charsWritten;
-		else
+		}
+		else {
 			throw new InvalidOperationException();
+		}
 	}
 
 	public void PutRaw(char c) {
@@ -60,10 +65,13 @@ public ref struct StrWriter {
 	}
 
 	public void Finish(bool terminate) {
-		if (SeparatorAtEnd)
+		if (SeparatorAtEnd) {
 			PutRaw(Separator);
-		if (terminate)
+		}
+
+		if (terminate) {
 			PutRaw('\0');
+		}
 	}
 
 	public ReadOnlySpan<char> AsSpan(bool terminate = false) {

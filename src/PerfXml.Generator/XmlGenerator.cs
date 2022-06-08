@@ -1,153 +1,178 @@
+using System.Collections.Immutable;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using PerfXml.Generator.Internal;
 
 namespace PerfXml.Generator;
 
 [Generator]
-internal sealed partial class XmlGenerator : ISourceGenerator {
-	private readonly Dictionary<ITypeSymbol, ClassGenInfo> classes = new(SymbolEqualityComparer.Default);
+internal sealed partial class XmlGenerator : IIncrementalGenerator {
+	public void Initialize(IncrementalGeneratorInitializationContext context) {
+		var valueObjects = context.SyntaxProvider
+		   .CreateSyntaxProvider(SyntaxFilter, SyntaxTransform)
+		   .Where(x => x is not null)
+		   .Select((nts, ct) => nts!)
+		   .Collect();
 
-	public void Initialize(GeneratorInitializationContext context) {
-		context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
-// #if DEBUG
-// 		if (Debugger.IsAttached is false) {
-// 			Debugger.Launch();
-// 		}
-// #endif
+		context.RegisterSourceOutput(valueObjects, CodeGeneration);
 	}
 
-	public void Execute(GeneratorExecutionContext context) {
-		try {
-			ExecuteInternal(context);
+	private static bool SyntaxFilter(SyntaxNode node, CancellationToken ct) {
+		if (node is ClassDeclarationSyntax cls) {
+			var attributeCheck = cls.AttributeLists.Any(x => x.Attributes
+			   .Any(y => y.Name.ToString() is "XmlCls" or "XmlClsAttribute"));
+			var partialCheck = cls.Modifiers.Any(x => x.IsKind(SyntaxKind.PartialKeyword));
+			return attributeCheck && partialCheck;
 		}
-		catch (Exception e) {
-			var descriptor = new DiagnosticDescriptor(nameof(XmlGenerator),
-				"Error",
-				e.ToString(),
-				"Error",
-				DiagnosticSeverity.Error,
-				true);
-			var diagnostic = Diagnostic.Create(descriptor, Location.None);
-			context.ReportDiagnostic(diagnostic);
+
+		if (node is RecordDeclarationSyntax rec) {
+			var attributeCheck = rec.AttributeLists.Any(x => x.Attributes
+			   .Any(y => y.Name.ToString() is "XmlCls" or "XmlClsAttribute"));
+			var partialCheck = rec.Modifiers.Any(x => x.IsKind(SyntaxKind.PartialKeyword));
+			return attributeCheck && partialCheck;
 		}
+
+		return false;
 	}
 
-	private void ExecuteInternal(GeneratorExecutionContext context) {
-		if (context.SyntaxReceiver is not SyntaxReceiver receiver)
-			return;
+	private static ClassGenInfo? SyntaxTransform(GeneratorSyntaxContext context, CancellationToken ct) {
+		var bodyAttributeSymbol = context.SemanticModel.Compilation
+		   .GetTypeByMetadataName("PerfXml.XmlBodyAttribute");
+		var fieldAttributeSymbol = context.SemanticModel.Compilation
+		   .GetTypeByMetadataName("PerfXml.XmlFieldAttribute");
+		var classAttributeSymbol = context.SemanticModel.Compilation
+		   .GetTypeByMetadataName("PerfXml.XmlClsAttribute");
+		var splitStringAttributeSymbol = context.SemanticModel.Compilation
+		   .GetTypeByMetadataName("PerfXml.XmlSplitStrAttribute");
 
-		var compilation = context.Compilation;
+		if (bodyAttributeSymbol is null
+		 || fieldAttributeSymbol is null
+		 || classAttributeSymbol is null
+		 || splitStringAttributeSymbol is null) {
+			return null;
+		}
 
-		var bodyAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlBodyAttribute");
-		var fieldAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlFieldAttribute");
-		var classAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlClsAttribute");
-		var splitStringAttributeSymbol = compilation.GetTypeByMetadataName("PerfXml.XmlSplitStrAttribute");
+		ClassGenInfo? ParseTypeToClass(INamedTypeSymbol namedType) {
+			var clsAttribute = namedType.TryGetAttribute(classAttributeSymbol);
+			if (clsAttribute is null) {
+				return null;
+			}
 
-		foreach (var cl in receiver.Classes) {
-			var model = compilation.GetSemanticModel(cl.SyntaxTree);
-			var symbol = model.GetDeclaredSymbol(cl);
-
-			var classAttr = symbol.TryGetAttribute(classAttributeSymbol);
-
-			var havePartialKeyword = cl.Modifiers.Any(x => x.IsKind(SyntaxKind.PartialKeyword));
-
-			if (classAttr is null || symbol is null || havePartialKeyword is false)
-				continue;
-
-			var classGenInfo = new ClassGenInfo(symbol) {
-				ClassName = classAttr.ConstructorArguments[0].AsString()
+			var clsGen = new ClassGenInfo(namedType) {
+				ClassName = clsAttribute.ConstructorArguments[0].AsString(),
+				InheritedFromSerializable = namedType.BaseType?.ToString() is not (null or "Object")
+				 && namedType.BaseType.TryGetAttribute(classAttributeSymbol) is not null
 			};
 
-			if (classGenInfo.ClassName is null) {
-				var ancestor = symbol.GetAllAncestors()
+			if (clsGen.ClassName is null) {
+				var ancestor = namedType.GetAllAncestors()
 				   .FirstOrDefault(t =>
 						t.TryGetAttribute(classAttributeSymbol)?.ConstructorArguments[0].Value is not null);
 				if (ancestor is not null) {
-					classGenInfo.ClassName =
-						ancestor.GetAttribute(classAttributeSymbol!).ConstructorArguments[0].Value!.ToString();
-					classGenInfo.InheritedClassName = true;
+					clsGen.ClassName =
+						ancestor.GetAttribute(classAttributeSymbol).ConstructorArguments[0].Value!.ToString();
+					clsGen.InheritedClassName = true;
 				}
 				else {
-					classGenInfo.ClassName = symbol.Name;
+					clsGen.ClassName = namedType.Name;
 				}
 			}
 
-			classGenInfo.AlreadyHasEmptyConstructor = symbol.InstanceConstructors
-			   .Any(x => x.Parameters.IsDefaultOrEmpty);
-
-			classes[symbol] = classGenInfo;
+			return clsGen;
 		}
 
-		foreach (var field in receiver.Fields) {
-			var model = compilation.GetSemanticModel(field.SyntaxTree);
-			foreach (var variable in field.Declaration.Variables) {
-				if (ModelExtensions.GetDeclaredSymbol(model, variable) is not IFieldSymbol symbol)
-					continue;
+		var symbol = context.Node switch {
+			ClassDeclarationSyntax cls => context.SemanticModel.GetDeclaredSymbol(cls, ct),
+			RecordDeclarationSyntax rec => context.SemanticModel.GetDeclaredSymbol(rec, ct),
+			_ => null
+		};
+		if (symbol is null) {
+			return null;
+		}
 
-				var fieldAttr = symbol.TryGetAttribute(fieldAttributeSymbol);
-				var bodyAttr = symbol.TryGetAttribute(bodyAttributeSymbol);
-				var splitAttr = symbol.TryGetAttribute(splitStringAttributeSymbol);
+		var classGenInfo = ParseTypeToClass(symbol);
+		if (classGenInfo is null) {
+			return null;
+		}
 
-				if (fieldAttr is null && bodyAttr is null)
-					continue;
+		var fields = symbol.GetMembers()
+		   .OfType<IFieldSymbol>()
+		   .Where(f => f is {
+				AssociatedSymbol: null,
+				IsConst: false,
+				IsStatic: false
+			});
+		foreach (var field in fields) {
+			var fieldAttr = field.TryGetAttribute(fieldAttributeSymbol);
+			var bodyAttr = field.TryGetAttribute(bodyAttributeSymbol);
+			var splitAttr = field.TryGetAttribute(splitStringAttributeSymbol);
 
-				if (classes.TryGetValue(symbol.ContainingType, out var classInfo) is false) {
-					classInfo = new(symbol.ContainingType);
-					classes[symbol.ContainingType] = classInfo;
-				}
+			if (fieldAttr is null && bodyAttr is null) {
+				continue;
+			}
 
-				var fieldInfo = new FieldGenInfo(symbol);
-				if (fieldAttr is not null) {
-					fieldInfo.XmlName = fieldAttr.ConstructorArguments[0].AsString() ?? symbol.Name;
-					classInfo.XmlAttributes.Add(fieldInfo);
-				}
+			var fieldInfo = new FieldGenInfo(field) {
+				TypeIsSerializable = field.Type.IsPrimitive() is false
+				 && (field.Type.IsList()
+							? ((INamedTypeSymbol)field.Type).OriginalDefinition.TypeArguments[0]
+							: field.Type
+						) switch {
+							INamedTypeSymbol nt => (nt.IsDefinition ? nt : nt.OriginalDefinition)
+							   .TryGetAttribute(classAttributeSymbol) is not null,
+							_ => false
+						}
+			};
+			if (fieldAttr is not null) {
+				fieldInfo.XmlName = fieldAttr.ConstructorArguments[0].AsString() ?? field.Name;
+				classGenInfo.XmlAttributes.Add(fieldInfo);
+			}
 
-				if (bodyAttr is not null) {
-					fieldInfo.XmlName = bodyAttr.ConstructorArguments[0].AsString() ?? symbol.Name;
-					classInfo.XmlBodies.Add(fieldInfo);
-				}
+			if (bodyAttr is not null) {
+				fieldInfo.XmlName = bodyAttr.ConstructorArguments[0].AsString() ?? field.Name;
+				classGenInfo.XmlBodies.Add(fieldInfo);
+			}
 
-				if (splitAttr?.ConstructorArguments[0].As<char>() is { } ch)
-					fieldInfo.SplitChar = ch;
+			if (splitAttr?.ConstructorArguments[0].As<char>() is { } ch) {
+				fieldInfo.SplitChar = ch;
 			}
 		}
 
-		foreach (var prop in receiver.Properties) {
-			var model = compilation.GetSemanticModel(prop.SyntaxTree);
-			if (ModelExtensions.GetDeclaredSymbol(model, prop) is not IPropertySymbol symbol || symbol.IsAbstract)
+		var properties = symbol.GetMembers()
+		   .OfType<IPropertySymbol>()
+		   .Where(p => p is {
+				IsStatic: false,
+				IsIndexer: false
+			});
+		foreach (var prop in properties) {
+			var fieldAttr = prop.TryGetAttribute(fieldAttributeSymbol);
+			var bodyAttr = prop.TryGetAttribute(bodyAttributeSymbol);
+			var splitAttr = prop.TryGetAttribute(splitStringAttributeSymbol);
+
+			if (fieldAttr is null && bodyAttr is null) {
 				continue;
-
-			var fieldAttr = symbol.TryGetAttribute(fieldAttributeSymbol);
-			var bodyAttr = symbol.TryGetAttribute(bodyAttributeSymbol);
-			var splitAttr = symbol.TryGetAttribute(splitStringAttributeSymbol);
-
-			if (fieldAttr is null && bodyAttr is null)
-				continue;
-
-			if (classes.TryGetValue(symbol.ContainingType, out var classInfo) is false) {
-				classInfo = new(symbol.ContainingType);
-				classes[symbol.ContainingType] = classInfo;
 			}
 
-			var propInfo = new PropertyGenInfo(symbol);
+			var propInfo = new PropertyGenInfo(prop) {
+				TypeIsSerializable = prop.Type.IsPrimitive() is false
+				 && (prop.Type.IsList()
+							? ((INamedTypeSymbol)prop.Type).OriginalDefinition.TypeArguments[0]
+							: prop.Type
+						) switch {
+							INamedTypeSymbol nt => (nt.IsDefinition ? nt : nt.OriginalDefinition)
+							   .TryGetAttribute(classAttributeSymbol) is not null,
+							_ => false
+						}
+			};
 
 			if (fieldAttr is not null) {
-				propInfo.XmlName = fieldAttr.ConstructorArguments[0].AsString() ?? symbol.Name;
-				classInfo.XmlAttributes.Add(propInfo);
+				propInfo.XmlName = fieldAttr.ConstructorArguments[0].AsString() ?? prop.Name;
+				classGenInfo.XmlAttributes.Add(propInfo);
 			}
 
 			if (bodyAttr is not null) {
 				var takeNameFromType = bodyAttr.ConstructorArguments[0].Value is true;
 				if (takeNameFromType) {
-					var fieldType = symbol.Type;
-					propInfo.XmlName = fieldType switch {
-						INamedTypeSymbol nt => classes.TryGetValue(nt, out var ci)
-							? ci.ClassName
-							: nt.GetAttribute(classAttributeSymbol!).ConstructorArguments[0].AsString()
-						 ?? nt.GetAllAncestors()
-							   .Select(x => x.TryGetAttribute(classAttributeSymbol))
-							   .FirstOrDefault(x => x?.ConstructorArguments[0].Value is not null)
-							  ?.ConstructorArguments[0]
-							   .AsString(),
+					propInfo.XmlName = prop.Type switch {
+						INamedTypeSymbol nt => GetClsNameForSerializationType(nt),
 						ITypeParameterSymbol => throw new(
 							"Cannot set name of sub-body entry with name of base of generic type parameter type"),
 						_ => null
@@ -157,45 +182,54 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 					propInfo.XmlName = bodyAttr.ConstructorArguments[0].AsString();
 				}
 
-				classInfo.XmlBodies.Add(propInfo);
+				classGenInfo.XmlBodies.Add(propInfo);
 			}
 
-			if (splitAttr?.ConstructorArguments[0].As<char>() is { } ch)
+			if (splitAttr?.ConstructorArguments[0].As<char>() is { } ch) {
 				propInfo.SplitChar = ch;
+			}
 		}
 
-		foreach (var pair in classes
-					.Where(x => x.Value.AlreadyHasEmptyConstructor)
-					.ToArray()) {
-			var v = pair.Value;
-			v.XmlAttributes.RemoveAll(x => x.OriginalType.IsList());
-			v.XmlBodies.RemoveAll(x => x.OriginalType.IsList());
-		}
+		return classGenInfo;
 
-		foreach (var pair in classes) {
-			var v = pair.Value;
-			if (v.Symbol.HasBaseClass() && classes.ContainsKey(v.Symbol.BaseType!.OriginalDefinition))
-				v.InheritedFromSerializable = true;
+		string GetClsNameForSerializationType(INamedTypeSymbol typeSymbol) {
+			var nameFromClsAttribute = typeSymbol.TryGetAttribute(classAttributeSymbol)
+			  ?.ConstructorArguments[0]
+			   .AsString();
+			if (nameFromClsAttribute is not null) {
+				return nameFromClsAttribute;
+			}
 
-			if (v.XmlAttributes.Any(x => x.OriginalType is ITypeParameterSymbol)
-			 || v.XmlBodies.Any(x => x.OriginalType is ITypeParameterSymbol))
-				v.HaveGenericElements = true;
-		}
-
-		foreach (var group in classes
-					.GroupBy(x => x.Value.Symbol.ContainingNamespace,
-						 x => x.Value,
-						 SymbolEqualityComparer.Default)) {
-			var ns = group.Key!.ToString()!;
-			var source = ProcessClasses(ns, group);
-			if (source is null)
-				continue;
-
-			context.AddSource($"{nameof(XmlGenerator)}_{ns}.cs", SourceText.From(source, Encoding.UTF8));
+			var ancestor = typeSymbol.GetAllAncestors()
+			   .FirstOrDefault(t =>
+					t.TryGetAttribute(classAttributeSymbol)?.ConstructorArguments[0].Value is not null);
+			return ancestor is not null
+				? ancestor.GetAttribute(classAttributeSymbol).ConstructorArguments[0].Value!.ToString()
+				: typeSymbol.Name;
 		}
 	}
 
-	private string? ProcessClasses(string containingNamespace, IEnumerable<ClassGenInfo> enumerable) {
+	private static void CodeGeneration(SourceProductionContext context, ImmutableArray<ClassGenInfo> types) {
+		if (types.IsDefaultOrEmpty) {
+			return;
+		}
+
+		var typesGroupedByNamespace = types
+		   .ToLookup(x => x.Symbol.ContainingNamespace, SymbolEqualityComparer.Default);
+
+		foreach (var a in typesGroupedByNamespace) {
+			var group = a.ToArray();
+			var ns = a.Key!.ToString()!;
+			var sourceCode = ProcessClasses(ns, group);
+			if (sourceCode is null) {
+				continue;
+			}
+
+			context.AddSource($"{nameof(XmlGenerator)}_{ns}.cs", SourceText.From(sourceCode, Encoding.UTF8));
+		}
+	}
+
+	private static string? ProcessClasses(string containingNamespace, ClassGenInfo[] classes) {
 		var writer = new IndentedTextWriter(new StringWriter(), "  ");
 		writer.WriteLine("using System;");
 		writer.WriteLine("using System.IO;");
@@ -206,7 +240,7 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		writer.WriteLine($"namespace {containingNamespace};");
 		writer.WriteLine();
 
-		foreach (var cls in enumerable)
+		foreach (var cls in classes) {
 			using (NestedClassScope.Start(writer, cls.Symbol, cls.InheritedFromSerializable is false)) {
 				if (cls.InheritedClassName is false) {
 					writer.WriteLine("public{0} ReadOnlySpan<char> GetNodeName() => \"{1}\";",
@@ -221,12 +255,13 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 				WriteSerializeAttributes(writer, cls);
 				WriteSerialize(writer, cls);
 			}
+		}
 
 		var resultStr = writer.InnerWriter.ToString();
 		return resultStr;
 	}
 
-	private string GetPutAttributeAction(BaseMemberGenInfo m) {
+	private static string GetPutAttributeAction(BaseMemberGenInfo m) {
 		var type = m.Type;
 		var name = m.Symbol.Name;
 		string? preCheck = null;
@@ -236,8 +271,9 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 			name += ".Value";
 		}
 
-		if (type.IsEnum())
+		if (type.IsEnum()) {
 			return $"{preCheck}buffer.PutEnumValue(\"{m.XmlName}\", {name})";
+		}
 
 		var writerAction = type.Name switch {
 			"String" => $"buffer.PutAttribute(\"{m.XmlName}\", {name});",
@@ -258,90 +294,6 @@ internal sealed partial class XmlGenerator : ISourceGenerator {
 		};
 		return $"{preCheck}{writerAction}";
 	}
-
-	// private string GetParseAction(BaseMemberGenInfo m) {
-	// 	var type = m.Type;
-	// 	if (m.Type.IfValueNullableGetInnerType() is { } t) {
-	// 		type = t;
-	// 	}
-	//
-	// 	if (type.IsEnum()) {
-	// 		return $"StrReader.ParseEnum<{type.Name}>(value)";
-	// 	}
-	//
-	// 	var readCommand = type.Name switch {
-	// 		"String"   => "value.ToString()",
-	// 		"Byte"     => "StrReader.ParseByte(value)",
-	// 		"Int16"    => "StrReader.ParseShort(value)",
-	// 		"Int32"    => "StrReader.ParseInt(value)",
-	// 		"UInt32"   => "StrReader.ParseUInt(value)",
-	// 		"Int64"    => "StrReader.ParseLong(value)",
-	// 		"Double"   => "StrReader.ParseDouble(value)",
-	// 		"Decimal"  => "StrReader.ParseDecimal(value)",
-	// 		"Char"     => "StrReader.ParseChar(value)",
-	// 		"Boolean"  => "StrReader.InterpretBool(value)",
-	// 		"Guid"     => "StrReader.ParseGuid(value)",
-	// 		"DateOnly" => "StrReader.ParseDateOnly(value)",
-	// 		"TimeOnly" => "StrReader.ParseTimeOnly(value)",
-	// 		"DateTime" => "StrReader.ParseDateTime(value)",
-	// 		_          => throw new($"no attribute reader for {type}")
-	// 	};
-	// 	return readCommand;
-	// }
-
-	// public static string GetWriterForType(ITypeSymbol type, string toWrite) {
-	// 	var t = type;
-	// 	if (type.IfValueNullableGetInnerType() is { } inner) {
-	// 		t = inner;
-	// 		toWrite += ".GetValueOrDefault()";
-	// 	}
-	//
-	// 	var result = t.Name switch {
-	// 		"String"  => $"writer.PutString({toWrite})",
-	// 		"ReadOnlySpan<char>" => $"writer.PutString({toWrite})",
-	// 		"Byte"
-	// 			or "Int16"
-	// 			or "Int32"
-	// 			or "UInt32"
-	// 			or "Int64"
-	// 			or "Double"
-	// 			or "Decimal"
-	// 			or "Char"
-	// 			or "Boolean"
-	// 			or "Guid"
-	// 			or "DateOnly"
-	// 			or "TimeOnly"
-	// 			or "DateTime" => $"writer.PutValue({toWrite});",
-	// 		_ => throw new($"GetWriterForType: {type} is missing")
-	// 	};
-	// 	return result;
-	// }
-
-	// public static string GetReaderForType(ITypeSymbol type) {
-	// 	if (type.IsEnum()) {
-	// 		return $"reader.GetEnumValue<{type.Name}>()";
-	// 	}
-	//
-	// 	var result = type.Name switch {
-	// 		"String"   => "reader.GetString().ToString()",
-	// 		"ReadOnlySpan<char>"  => "reader.GetReadOnlySpan<char>ing()",
-	// 		"Byte"     => "reader.GetByte()",
-	// 		"Int16"    => "reader.GetShort()",
-	// 		"Int32"    => "reader.GetInt()",
-	// 		"UInt32"   => "reader.GetUInt()",
-	// 		"Int64"    => "reader.GetLong()",
-	// 		"Double"   => "reader.GetDouble()",
-	// 		"Decimal"  => "reader.GetDecimal()",
-	// 		"Char"     => "reader.GetChar()",
-	// 		"Boolean"  => "reader.GetBoolean()",
-	// 		"Guid"     => "reader.GetGuid()",
-	// 		"DateOnly" => "reader.GetDateOnly()",
-	// 		"TimeOnly" => "reader.GetTimeOnly()",
-	// 		"DateTime" => "reader.GetDateTime()",
-	// 		_          => throw new($"GetReaderForType: {type} is missing")
-	// 	};
-	// 	return result;
-	// }
 
 	private static ulong HashName(ReadOnlySpan<char> name) {
 		var hashedValue = 0x2AAAAAAAAAAAAB67ul;

@@ -5,9 +5,7 @@ public sealed class StandardResolver : IXmlFormatterResolver {
 
 	public static readonly StandardResolver Instance = new();
 
-	public IXmlFormatter<T>? GetFormatter<T>() {
-		return Cache<T>.Formatter;
-	}
+	public IXmlFormatter<T>? GetFormatter<T>() => Cache<T>.Formatter;
 
 	private static class Cache<T> {
 		public static readonly IXmlFormatter<T>? Formatter;

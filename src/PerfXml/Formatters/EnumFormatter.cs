@@ -10,7 +10,5 @@ public sealed class EnumFormatter<T> : IXmlFormatter<T>
 		return name.TryCopyTo(span);
 	}
 
-	public T Parse(ReadOnlySpan<char> span, IXmlFormatterResolver resolver) {
-		return EnumCache.ByName<T>(span.ToString());
-	}
+	public T Parse(ReadOnlySpan<char> span, IXmlFormatterResolver resolver) => EnumCache.ByName<T>(span.ToString());
 }
