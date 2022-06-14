@@ -179,7 +179,6 @@ public sealed class DateTimeFormatter : IXmlFormatter<DateTime> {
 	public bool TryWriteTo(Span<char> span, DateTime value, out int charsWritten, IXmlFormatterResolver resolver) =>
 		value.TryFormat(span, out charsWritten, format, CultureInfo.InvariantCulture);
 
-	public DateTime Parse(ReadOnlySpan<char> span, IXmlFormatterResolver resolver) {
-		return DateTime.ParseExact(span, format, CultureInfo.InvariantCulture);
-	}
+	public DateTime Parse(ReadOnlySpan<char> span, IXmlFormatterResolver resolver) =>
+		DateTime.ParseExact(span, format, CultureInfo.InvariantCulture);
 }

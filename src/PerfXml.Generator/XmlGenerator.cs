@@ -81,9 +81,9 @@ internal sealed partial class XmlGenerator : IIncrementalGenerator {
 		}
 
 		var symbol = context.Node switch {
-			ClassDeclarationSyntax cls => context.SemanticModel.GetDeclaredSymbol(cls, ct),
+			ClassDeclarationSyntax cls  => context.SemanticModel.GetDeclaredSymbol(cls, ct),
 			RecordDeclarationSyntax rec => context.SemanticModel.GetDeclaredSymbol(rec, ct),
-			_ => null
+			_                           => null
 		};
 		if (symbol is null) {
 			return null;
@@ -220,7 +220,7 @@ internal sealed partial class XmlGenerator : IIncrementalGenerator {
 		foreach (var a in typesGroupedByNamespace) {
 			var group = a.ToArray();
 			var ns = a.Key!.ToString()!;
-			var sourceCode = ProcessClasses(ns, group);
+			var sourceCode = ProcessClasses(context, ns, group);
 			if (sourceCode is null) {
 				continue;
 			}
@@ -229,8 +229,11 @@ internal sealed partial class XmlGenerator : IIncrementalGenerator {
 		}
 	}
 
-	private static string? ProcessClasses(string containingNamespace, ClassGenInfo[] classes) {
-		var writer = new IndentedTextWriter(new StringWriter(), "  ");
+	private static string? ProcessClasses(SourceProductionContext context,
+		string containingNamespace,
+		ClassGenInfo[] classes) {
+		using var sourceCodeWriter = new SourceCodeWriter("  ");
+		var writer = sourceCodeWriter.Writer;
 		writer.WriteLine("using System;");
 		writer.WriteLine("using System.IO;");
 		writer.WriteLine("using System.Collections.Generic;");
@@ -249,59 +252,29 @@ internal sealed partial class XmlGenerator : IIncrementalGenerator {
 					);
 				}
 
-				WriteParseBody(writer, cls);
-				WriteParseAttribute(writer, cls);
-				WriteSerializeBody(writer, cls);
-				WriteSerializeAttributes(writer, cls);
-				WriteSerialize(writer, cls);
+				using var savePoint = sourceCodeWriter.SavePoint();
+				try {
+					WriteParseBody(writer, cls);
+					WriteParseAttribute(writer, cls);
+					WriteSerializeBody(writer, cls);
+					WriteSerializeAttributes(writer, cls);
+					WriteSerialize(writer, cls);
+				}
+				catch (Exception ex) {
+					savePoint.Cancel();
+					var descriptor = new DiagnosticDescriptor(nameof(XmlGenerator),
+						"Error",
+						ex.ToString(),
+						"Error",
+						DiagnosticSeverity.Error,
+						true);
+					var diagnostic = Diagnostic.Create(descriptor, Location.None);
+					context.ReportDiagnostic(diagnostic);
+				}
 			}
 		}
 
 		var resultStr = writer.InnerWriter.ToString();
 		return resultStr;
-	}
-
-	private static string GetPutAttributeAction(BaseMemberGenInfo m) {
-		var type = m.Type;
-		var name = m.Symbol.Name;
-		string? preCheck = null;
-		if (m.Type.IfValueNullableGetInnerType() is { } t) {
-			type = t;
-			preCheck = $"if ({name}.HasValue) ";
-			name += ".Value";
-		}
-
-		if (type.IsEnum()) {
-			return $"{preCheck}buffer.PutEnumValue(\"{m.XmlName}\", {name})";
-		}
-
-		var writerAction = type.Name switch {
-			"String" => $"buffer.PutAttribute(\"{m.XmlName}\", {name});",
-			"Byte"
-				or "Int16"
-				or "Int32"
-				or "UInt32"
-				or "Int64"
-				or "Double"
-				or "Decimal"
-				or "Char"
-				or "Boolean"
-				or "Guid"
-				or "DateOnly"
-				or "TimeOnly"
-				or "DateTime" => $"buffer.PutAttributeValue(\"{m.XmlName}\", {name});",
-			_ => throw new($"no attribute writer for type {type}")
-		};
-		return $"{preCheck}{writerAction}";
-	}
-
-	private static ulong HashName(ReadOnlySpan<char> name) {
-		var hashedValue = 0x2AAAAAAAAAAAAB67ul;
-		for (var i = 0; i < name.Length; i++) {
-			hashedValue += name[i];
-			hashedValue *= 0x2AAAAAAAAAAAAB6Ful;
-		}
-
-		return hashedValue;
 	}
 }

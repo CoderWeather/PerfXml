@@ -92,7 +92,8 @@ internal partial class XmlGenerator {
 				foreach (var body in xmlBodies) {
 					var isList = body.OriginalType.IsList();
 
-					var nameToCheck = body.XmlName ?? throw new InvalidDataException("no body name??");
+					var nameToCheck = body.XmlName
+					 ?? throw new InvalidDataException($"no body name?? {body.Symbol} {cls.Symbol}");
 
 					writer.WriteLine($"case {HashName(new(nameToCheck.ToCharArray()))}:");
 					using (NestedScope.Start(writer)) {
@@ -107,7 +108,7 @@ internal partial class XmlGenerator {
 							else {
 								writer.WriteLines(
 									$"if (this.{body.Symbol.Name} is not null) throw new InvalidDataException(\"duplicate non-list body {body.Symbol.Name}\");",
-									$"this.{body.Symbol.Name} = buffer.Read<{body.Type}>(bodySpan, out end, resolver);"
+									$"this.{body.Symbol.Name} = buffer.Read<{body.Type.OriginalDefinition}>(bodySpan, out end, resolver);"
 								);
 							}
 						}
@@ -360,5 +361,49 @@ internal partial class XmlGenerator {
 				"buffer.EndNode(ref node);"
 			);
 		}
+	}
+
+	private static string GetPutAttributeAction(BaseMemberGenInfo m) {
+		var type = m.Type;
+		var name = m.Symbol.Name;
+		string? preCheck = null;
+		if (m.Type.IfValueNullableGetInnerType() is { } t) {
+			type = t;
+			preCheck = $"if ({name}.HasValue) ";
+			name += ".Value";
+		}
+
+		if (type.IsEnum()) {
+			return $"{preCheck}buffer.PutEnumValue(\"{m.XmlName}\", {name})";
+		}
+
+		var writerAction = type.Name switch {
+			"String" => $"buffer.PutAttribute(\"{m.XmlName}\", {name});",
+			"Byte"
+				or "Int16"
+				or "Int32"
+				or "UInt32"
+				or "Int64"
+				or "Double"
+				or "Decimal"
+				or "Char"
+				or "Boolean"
+				or "Guid"
+				or "DateOnly"
+				or "TimeOnly"
+				or "DateTime" => $"buffer.PutAttributeValue(\"{m.XmlName}\", {name});",
+			_ => throw new($"no attribute writer for type {type}")
+		};
+		return $"{preCheck}{writerAction}";
+	}
+
+	private static ulong HashName(ReadOnlySpan<char> name) {
+		var hashedValue = 0x2AAAAAAAAAAAAB67ul;
+		for (var i = 0; i < name.Length; i++) {
+			hashedValue += name[i];
+			hashedValue *= 0x2AAAAAAAAAAAAB6Ful;
+		}
+
+		return hashedValue;
 	}
 }
