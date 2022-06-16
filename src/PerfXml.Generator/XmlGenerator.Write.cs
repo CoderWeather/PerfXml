@@ -22,7 +22,7 @@ internal partial class XmlGenerator {
 
 		if (needsInlineBody) {
 			writer.WriteLine(
-				$"public{cls.AdditionalMethodsModifiers} bool ParseFullBody(ref XmlReadBuffer buffer, ReadOnlySpan<char> bodySpan, ref int end, IXmlFormatterResolver resolver)"
+				$"public{cls.AdditionalInheritanceMethodModifiers} bool ParseFullBody(ref XmlReadBuffer buffer, ReadOnlySpan<char> bodySpan, ref int end, IXmlFormatterResolver resolver)"
 			);
 			using (NestedScope.Start(writer)) {
 				foreach (var body in cls.XmlBodies) {
@@ -72,7 +72,7 @@ internal partial class XmlGenerator {
 		}
 
 		writer.WriteLine(
-			$"public{cls.AdditionalMethodsModifiers} bool ParseSubBody(ref XmlReadBuffer buffer, ulong hash, ReadOnlySpan<char> bodySpan, ReadOnlySpan<char> innerBodySpan, ref int end, ref int endInner, IXmlFormatterResolver resolver)"
+			$"public{cls.AdditionalInheritanceMethodModifiers} bool ParseSubBody(ref XmlReadBuffer buffer, ulong hash, ReadOnlySpan<char> bodySpan, ReadOnlySpan<char> innerBodySpan, ref int end, ref int endInner, IXmlFormatterResolver resolver)"
 		);
 		using (NestedScope.Start(writer)) {
 			if (xmlBodies.Any() is false) {
@@ -93,7 +93,7 @@ internal partial class XmlGenerator {
 					var isList = body.OriginalType.IsList();
 
 					var nameToCheck = body.XmlName
-					 ?? throw new InvalidDataException($"no body name?? {body.Symbol} {cls.Symbol}");
+					 ?? throw new InvalidDataException($"no body name for {body.Symbol} in {cls.Symbol}");
 
 					writer.WriteLine($"case {HashName(new(nameToCheck.ToCharArray()))}:");
 					using (NestedScope.Start(writer)) {
@@ -136,7 +136,7 @@ internal partial class XmlGenerator {
 		   .ToArray();
 
 		writer.WriteLine(
-			$"public{cls.AdditionalMethodsModifiers} bool ParseSubBody(ref XmlReadBuffer buffer, ReadOnlySpan<char> nodeName, ReadOnlySpan<char> bodySpan, ReadOnlySpan<char> innerBodySpan, ref int end, ref int endInner, IXmlFormatterResolver resolver)"
+			$"public{cls.AdditionalInheritanceMethodModifiers} bool ParseSubBody(ref XmlReadBuffer buffer, ReadOnlySpan<char> nodeName, ReadOnlySpan<char> bodySpan, ReadOnlySpan<char> innerBodySpan, ref int end, ref int endInner, IXmlFormatterResolver resolver)"
 		);
 		using (NestedScope.Start(writer)) {
 			if (xmlBodies.Any() is false) {
@@ -188,7 +188,7 @@ internal partial class XmlGenerator {
 		}
 
 		writer.WriteLine(
-			$"public{cls.AdditionalMethodsModifiers} bool ParseAttribute(ref XmlReadBuffer buffer, ulong hash, ReadOnlySpan<char> value, IXmlFormatterResolver resolver)"
+			$"public{cls.AdditionalInheritanceMethodModifiers} bool ParseAttribute(ref XmlReadBuffer buffer, ulong hash, ReadOnlySpan<char> value, IXmlFormatterResolver resolver)"
 		);
 		using (NestedScope.Start(writer)) {
 			if (xmlAttrs.Any() is false) {
@@ -242,7 +242,7 @@ internal partial class XmlGenerator {
 		}
 
 		writer.WriteLine(
-			$"public{cls.AdditionalMethodsModifiers} void SerializeBody(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver)"
+			$"public{cls.AdditionalInheritanceMethodModifiers} void SerializeBody(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver)"
 		);
 		using (NestedScope.Start(writer)) {
 			if (cls.XmlBodies.Any() is false) {
@@ -306,7 +306,7 @@ internal partial class XmlGenerator {
 		}
 
 		writer.WriteLine(
-			$"public{cls.AdditionalMethodsModifiers} void SerializeAttributes(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver)");
+			$"public{cls.AdditionalInheritanceMethodModifiers} void SerializeAttributes(ref XmlWriteBuffer buffer, IXmlFormatterResolver resolver)");
 		using (NestedScope.Start(writer)) {
 			if (cls.InheritedFromSerializable) {
 				writer.WriteLine("base.SerializeAttributes(ref buffer, resolver);");

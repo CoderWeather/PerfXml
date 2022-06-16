@@ -15,7 +15,7 @@ internal sealed class ClassGenInfo {
 		Symbol = symbol;
 	}
 
-	public string? AdditionalMethodsModifiers =>
+	public string? AdditionalInheritanceMethodModifiers =>
 		InheritedFromSerializable
 			? " override"
 			: Symbol.IsSealed is false || Symbol.IsAbstract

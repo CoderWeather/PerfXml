@@ -231,7 +231,8 @@ internal sealed partial class XmlGenerator : IIncrementalGenerator {
 
 	private static string? ProcessClasses(SourceProductionContext context,
 		string containingNamespace,
-		ClassGenInfo[] classes) {
+		ClassGenInfo[] classes
+	) {
 		using var sourceCodeWriter = new SourceCodeWriter("  ");
 		var writer = sourceCodeWriter.Writer;
 		writer.WriteLine("using System;");
@@ -247,34 +248,38 @@ internal sealed partial class XmlGenerator : IIncrementalGenerator {
 			using (NestedClassScope.Start(writer, cls.Symbol, cls.InheritedFromSerializable is false)) {
 				if (cls.InheritedClassName is false) {
 					writer.WriteLine("public{0} ReadOnlySpan<char> GetNodeName() => \"{1}\";",
-						cls.AdditionalMethodsModifiers,
+						cls.AdditionalInheritanceMethodModifiers,
 						cls.ClassName
 					);
 				}
 
-				using var savePoint = sourceCodeWriter.SavePoint();
-				try {
-					WriteParseBody(writer, cls);
-					WriteParseAttribute(writer, cls);
-					WriteSerializeBody(writer, cls);
-					WriteSerializeAttributes(writer, cls);
-					WriteSerialize(writer, cls);
-				}
-				catch (Exception ex) {
-					savePoint.Cancel();
-					var descriptor = new DiagnosticDescriptor(nameof(XmlGenerator),
-						"Error",
-						ex.ToString(),
-						"Error",
-						DiagnosticSeverity.Error,
-						true);
-					var diagnostic = Diagnostic.Create(descriptor, Location.None);
-					context.ReportDiagnostic(diagnostic);
+				SafeCall(WriteParseBody);
+				SafeCall(WriteParseAttribute);
+				SafeCall(WriteSerializeBody);
+				SafeCall(WriteSerializeAttributes);
+				SafeCall(WriteSerialize);
+
+				void SafeCall(Action<IndentedTextWriter, ClassGenInfo> action) {
+					try {
+						using var savePoint = sourceCodeWriter.SavePoint();
+						var w = savePoint.Writer.Writer;
+						action.Invoke(w, cls);
+					}
+					catch (Exception ex) {
+						var descriptor = new DiagnosticDescriptor(nameof(XmlGenerator),
+							"Error",
+							ex.ToString(),
+							"Error",
+							DiagnosticSeverity.Error,
+							true);
+						var diagnostic = Diagnostic.Create(descriptor, Location.None);
+						context.ReportDiagnostic(diagnostic);
+					}
 				}
 			}
 		}
 
-		var resultStr = writer.InnerWriter.ToString();
+		var resultStr = sourceCodeWriter.ToString();
 		return resultStr;
 	}
 }

@@ -37,7 +37,7 @@ internal sealed class SourceCodeWriter : IDisposable {
 		}
 	}
 
-	public override string ToString() => baseWriter.ToString();
+	public override string ToString() => baseWriter.InnerWriter.ToString();
 
 	public void Dispose() {
 		if (savePoints.Count > 0) {
