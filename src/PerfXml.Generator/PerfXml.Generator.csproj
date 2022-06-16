@@ -13,7 +13,7 @@
 
     <PropertyGroup>
         <PackageId>PerfXml.Generator</PackageId>
-        <Version>1.0.9</Version>
+        <Version>1.0.10</Version>
         <Authors>Ilya Pogodin</Authors>
         <Description>Fast and low memory consumption C# XML serialization\deserialization engine with source generators.</Description>
         <RepositoryUrl>https://github.com/CoderWeather/PerfXml</RepositoryUrl>
